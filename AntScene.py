@@ -13,17 +13,19 @@ class AntScene(Scene):
     maxFoods =              Option(100,   'Maximum Foods Spawned')
     genSize =               Option(100,   'How many ants per generation')
     framesPerGeneration =   Option(300,   'How long each generation lasts')
-    doBreeding =            Option(False, 'Breed, or only mutate')
-    autoBreed =             Option(True,  'Whether a new generation will be created after a time')
+    doBreeding =            Option(False,  'Breed, or only mutate', widgetText='Do Breeding')
+    autoBreed =             Option(True,   'Whether a new generation will be created after a time', widgetText='Auto-Breed')
 
     def init(self, **params):
         self.ants = []
         self.foodCollected = 0
-        self.homeColor = Option([32, 60, 105], 'The home base color', _type='Color', widgetText='test')
+        self.homeColor = Option([32, 60, 105], 'The home base color', _type='Color')
         self.generation = 0
         self.speedx = Option(1, 'How fast the simulation runs', min=1)
         self.mutationChance = 100
         self.currentFrame = 0
+        # null, because there is no return type for __init__
+        self.null = Option(self.__init__, widgetText='Reset the Simulation', params=(self.mainSurface,), tooltip='Restart the simulation')
 
         # Spawn food
         # if not len(self.food):
@@ -118,9 +120,6 @@ class AntScene(Scene):
 
         if key == 'r':
             self.__init__(self.mainSurface)
-            # print(len(self.food))
-            # for cnt, i in enumerate(self.food):
-            #     print(cnt, ': ', i, sep='')
 
         if key == 'g':
             self.newGen()

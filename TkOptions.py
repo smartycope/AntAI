@@ -3,23 +3,34 @@ from tkinter.ttk import *
 from tkinter import ttk
 from tkinter import colorchooser
 from enum import Enum
+from types import *
 
 from os.path import dirname; DIR = dirname(__file__)
 import os
 
+from TkOptionMenu import OptionsMenu
+from Tooltip import Tooltip
+
 import json
+
+def rgbToHex(rgb):
+    """translates an rgb tuple of int to a tkinter friendly color code"""
+    return f'#{int(rgb[0]):02x}{int(rgb[1]):02x}{int(rgb[2]):02x}'
 
 RESET_FILE = True
 
 SETTINGS_FILE = DIR + '/settings.json'
+FUNC_TYPES = (FunctionType, BuiltinFunctionType, BuiltinMethodType, LambdaType, MethodWrapperType, MethodType)
+
 
 class Option:
-    def __init__(self, value, label='', currentItem=None, widgetText='', min=None, max=None, _type=None):
+    def __init__(self, value, label='', currentItem=None, widgetText='', tooltip=None, min=None, max=None, _type=None, params=(), kwparams={}):
         self.defaultValue = value
         self.type = _type
         if type(self.type) is str:
             self.type = self.type.lower()
-        validTypeList = (int, float, bool, str, tuple, list, 'color')
+
+        validTypeList = (int, float, bool, str, tuple, list, 'color') + FUNC_TYPES
 
         #* If value is an Enum
         if type(value) not in validTypeList and issubclass(value, Enum) and _type is None:
@@ -58,6 +69,15 @@ class Option:
         self.name = label
         self._value = None
         self.widgetText = widgetText
+        self.tooltip = tooltip
+
+        if self.type in FUNC_TYPES:
+            self.params = params
+            self.kwparams = kwparams
+            self.func = value
+            # self.func = lambda self: self.returnVal = value(*self.params, **self.kwparams)
+            self.value = None
+            self.defaultValue = None
 
         if RESET_FILE:
             self.restoreDefault()
@@ -72,6 +92,9 @@ class Option:
         else:
             with open(SETTINGS_FILE, 'r+') as f:
                 self.value = json.load(f)[self.name]
+
+    def callback(self):
+        self._value = self.func(*self.params, **self.kwparams)
 
     def restoreDefault(self):
         print(f'Reseting {self.value} to {self.defaultValue}')
@@ -102,6 +125,10 @@ class Option:
             self._value = tk.DoubleVar(root, self.value)
         elif self.type in (str, tuple, list):
             self._value = tk.StringVar(root, self.value)
+        elif self.type == 'color':
+            self._value = self.value
+        # elif self.type in FUNC_TYPES:
+
         # elif self.type in (tuple, list):
             # self._value = tk.StringVar(r)
 
@@ -128,20 +155,43 @@ class Option:
             self.element = Combobox(root, values=self.options, textvariable=self._value)
             self.element.current(self.options.index(self.value))
 
-        elif self.type.lower() == 'color':
-            self.element = tk.Button(root, command=self.colorPicker, text=self.widgetText, fg=self._value)
+        elif self.type == 'color':
+            self.element = tk.Button(root, command=self.colorPicker, text=self.widgetText, bg=rgbToHex(self.value))
+
+        elif self.type in FUNC_TYPES:
+            self.element = tk.Button(root, command=self.callback, text=self.widgetText)
 
         self.element.pack()
+        if self.tooltip is not None:
+            self.tooltipObj = Tooltip(self.element, self.tooltip)
 
     def colorPicker(self):
         self._value = colorchooser.askcolor(title="Choose Color")[0]
+        if self._value is not None:
+            self.element['bg'] = rgbToHex(self._value)
         # print(self._value)
 
-    def update(self):
-        if self.type not in (tuple, list):
-            self.value = self._value.get()
+    def call(self, params=None, kwparams={}):
+        if self.type in FUNC_TYPES:
+            if params is None:
+                params = self.params
+            if kwparams is None:
+                kwparams = self.kwparams
+
+            self.returnVal = self.func(*params, *kwparams)
+            return self.returnVal
         else:
+            raise AttributeError("Cannot call a non-function option")
+
+    def update(self):
+        if self.type == 'color':
+            if self._value is not None:
+                self.value = self._value
+        elif self.type in FUNC_TYPES:
             self.value = self._value
+        else:
+            self.value = self._value.get()
+            
         self.save()
 
     def get(self):
@@ -163,95 +213,3 @@ class Option:
             json.dump(data, jsonFile)
 
 
-
-class OptionsMenu(tk.Frame):
-    def __init__(self, master, *options):
-        super().__init__(master)
-        self.master = master
-        self.master.title = 'Options'
-        # self.master.maxsize(1000, 600)
-        self.master.minsize(500,  300)
-
-        self.options = options
-        self.tabNames = []
-        self.tabs = []
-
-        for i in self.options:
-            self.tabNames.append(i[0])
-            del i[0]
-
-        self.pack()
-        self.createUI()
-
-    def createUI(self):
-        self.notebook = Notebook(self)
-
-        #* Create all the important widgets
-        for k in self.options:
-            self.tabs.append(tk.Frame(self.notebook))
-            for i in k:
-                i.create(self.tabs[-1])
-                self.newline = tk.Label(self.tabs[-1], text='')
-                self.newline.pack()
-
-        #* Add tab names to the tabs
-        for cnt, i in enumerate(self.tabs):
-            self.notebook.add(i, text=self.tabNames[cnt])
-
-        self.master.bind('<Escape>', self.exit)
-        self.master.bind('o', self.exit)
-        self.master.bind('<Return>', self.save)
-        self.master.bind('<Enter>', self.save)
-
-        # self.scrollbar = Scrollbar(self)
-        # self.scrollbar.pack(side='right')
-
-        self.notebook.pack(expand=1, fill='both')
-
-        self.newline = tk.Label(self, text='\n')
-        self.newline.pack()
-
-        self.quit = tk.Button(self, text="Cancel", command=self.master.destroy)
-        # self.quit.pack(side='bottom')
-        # self.quit.pack(side='bottom', padx=, pady=0)
-        self.quit.pack()
-        # self.quit.place(rely=0.0, relx=0.0, x=0, y=0, anchor='s')
-
-        self.saveButton = tk.Button(self, text='Save', command=self.save)
-        # self.saveButton.pack(side="bottom")
-        # self.saveButton.pack(side='bottom', padx=0, pady=5)
-        self.saveButton.pack()
-        # self.saveButton.place(rely=0.0, relx=0.0, x=0, y=0, anchor='s')
-
-        self.restoreButton = tk.Button(self, text='Restore to Defaults', command=self.restore, padx=100)
-        self.restoreButton.pack(side='bottom')
-        # self.restoreButton.gri
-
-        
-        # self.restoreButton.pack(side='bottom', padx=0, pady=10)
-        # self.restoreButton.pack()
-        # self.restoreButton.place(relx=1)
-
-        # self.scrollbar.config(command=self.scrollStuff)
-
-    def restore(self):
-        for k in self.options:
-            for i in k:
-                i.restoreDefault()
-
-    def scrollStuff(self, param):
-        self.newline.pady - 1
-        self.quit.pady - 1
-        self.saveButton.pady - 1
-        for i in self.options:
-            i.pady - 1
-
-    def save(self, event=None):
-        print('Saving settings...')
-        for k in self.options:
-            for i in k:
-                i.update()
-        self.master.destroy()
-
-    def exit(self, notSure):
-        self.master.destroy()
