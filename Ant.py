@@ -6,21 +6,40 @@ from enum import Enum, auto
 import pygame.gfxdraw
 from TkOptions import *
 
+#* How ants are mutated
 class Mutations(Enum):
     cutoff     = auto() # Only keep up to a certain randomized index, then go off in your own direction
     chunk      = auto() # Only change a randomized chunk of the dna, keep the rest
     induvidual = auto() # Randomly change random indecies with random values (random chance or random amount)
     invert     = auto() # Same as chunk, but instead of creating new data there, invert said data
 
+#* How ants are bred
 class Breeding(Enum):
     cutoff      = auto() # Cuts the dna at one point, and takes half from each parent
     multiCutoff = auto() # Cuts the dna at a bunch of points, then takes alternating peices from each parent
     induvidual  = auto() # Each bit of dna is randomly chosen from each parent
 
+#* How ants are selected to be bred
+class Romance(Enum):
+    induvidual        = auto() # Each creature has the same probibility of being bred
+    winnerSecond      = auto() # Breed the best creature and the second best creature
+    winnerProb        = auto() # Breed 2 random creatures, weighted by how good they are
+    groupWinnerSecond = auto() # Take a random selection of creatures, and breed the best 2 of that group
+    inbred            = auto() # Breed the top 2^n creatures with their next best creature, and do that over and over until there's one left
+
+#* How each generation is generated
+class GenGen(Enum):
+    familyLine = auto() # Choose one couple, and all the ants in a generation are children of that couple
+    induvidual = auto() # Repeat the Romance method for n times to get n couples, and the ants in a generation are children of those parents (all couples have approximately the same number of children)
+    none       = auto() # Every generation is completely random, every time
+    mutationOnly = auto() # Instead of breeding, each generation is comprised of mutations of the selected couple (either mother or father, randomly chosen)
+
 
 class Ant:
     mutationMethod =            Option(Mutations, 'Which Mutation method to use', Mutations.chunk)
     breedingMethod =            Option(Breeding, 'Which breeding method to use', Breeding.induvidual)
+    romanceMethod  =            Option(Romance, 'Which method of selecting ants to be bred to use', Romance.winnerSecond)
+    genGenMethod   =            Option(GenGen, 'Which method of generating the next Generation to use', GenGen.familyLine)
     minChunkLen  =              Option(5, 'The minimum amount of movements a chunk can have')
     chunkDivisor =              Option(1.1, 'What amount of the end of the dna to disallow chunking')
     induvidualMutationChance =  Option(20, 'The percent chance for each movement to be mutated') # Edit this to actually use a percentage
@@ -47,13 +66,6 @@ class Ant:
 
         if percent(mutationChance) and len(self.dna):
             self.mutate(~self.mutationMethod)
-
-        # If we're inheriting dna
-        # if not len(dna):
-        #     if len(dna) < 2:
-        #         raise IndexError("Try increasing the amount of time a generation runs for.")
-        #     self.mutate(~self.mutationMethod)
-
 
     def mutate(self, method):
         if method == Mutations.cutoff:

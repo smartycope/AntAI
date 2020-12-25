@@ -1,5 +1,4 @@
 from GuiScene import *
-import clipboard
 
 class OptionsMenu(GuiScene):
     def init(self, **params):

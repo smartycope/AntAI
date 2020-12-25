@@ -1,9 +1,9 @@
-from Scene import *
-from Point    import *
-from Ant      import Ant
-from Food     import Food
-from copy import deepcopy
-from tkinter import *
+from Scene     import *
+from Point     import *
+from Ant       import Ant
+from Food      import Food
+from copy      import deepcopy
+from tkinter   import *
 from TkOptions import *
 
 
@@ -14,11 +14,12 @@ class AntScene(Scene):
     genSize =               Option(100,   'How many ants per generation')
     framesPerGeneration =   Option(300,   'How long each generation lasts')
     doBreeding =            Option(False, 'Breed, or only mutate')
+    autoBreed =             Option(True,  'Whether a new generation will be created after a time')
 
     def init(self, **params):
         self.ants = []
         self.foodCollected = 0
-        self.homeColor = [32, 60, 105]
+        self.homeColor = Option([32, 60, 105], 'The home base color', _type='Color', widgetText='test')
         self.generation = 0
         self.speedx = Option(1, 'How fast the simulation runs', min=1)
         self.mutationChance = 100
@@ -41,10 +42,11 @@ class AntScene(Scene):
 
     def run(self, deltaTime):
         for _ in range(~self.speedx):
-            self.currentFrame += 1
-            if self.currentFrame >= ~self.framesPerGeneration:
-                self.newGen()
-                break
+            if ~self.autoBreed:
+                self.currentFrame += 1
+                if self.currentFrame >= ~self.framesPerGeneration:
+                    self.newGen()
+                    break
 
             for i in self.ants:
                 i.run()
@@ -53,7 +55,7 @@ class AntScene(Scene):
             for i in self.food:
                 i.draw(self.mainSurface)
 
-            pygame.gfxdraw.pixel(self.mainSurface, *self.center.datai(), self.homeColor)
+            pygame.gfxdraw.pixel(self.mainSurface, *self.center.datai(), self.homeColor.value)
 
             self.checkAnts()
 
