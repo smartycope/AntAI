@@ -142,4 +142,3 @@ class AntScene(Scene):
             self.speedx.value = 1
         if key == 'right':
             self.speedx.value += 3
-

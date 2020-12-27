@@ -378,33 +378,88 @@ def percent(percentage):
     return randint(1, 100) < percentage
 
 
+'''
 
-# from tkinter import *
+from tkinter import *   # from x import * is bad practice
+from tkinter.ttk import *
 
-# from tkinter import ttk
+# http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame
 
-# window = Tk()
+class VerticalScrolledFrame(Frame):
+    """A pure Tkinter scrollable frame that actually works!
+    * Use the 'interior' attribute to place widgets inside the scrollable frame
+    * Construct and pack/place/grid normally
+    * This frame only allows vertical scrolling
 
-# window.title("Welcome to LikeGeeks app")
+    """
+    def __init__(self, parent, *args, **kw):
+        Frame.__init__(self, parent, *args, **kw)            
 
-# tab_control = ttk.Notebook(window)
+        # create a canvas object and a vertical scrollbar for scrolling it
+        self.vscrollbar = Scrollbar(self, orient='vertical')
+        self.vscrollbar.pack(fill='y', side='right', expand=0)
+        self.canvas = Canvas(self, bd=0, highlightthickness=0,
+                        yscrollcommand=self.vscrollbar.set)
+        self.canvas.pack(side='left', fill='both', expand=1)
+        self.vscrollbar.config(command=self.canvas.yview)
 
-# tab1 = ttk.Frame(tab_control)
+        # reset the view
+        self.canvas.xview_moveto(0)
+        self.canvas.yview_moveto(0)
 
-# tab2 = ttk.Frame(tab_control)
+        # create a frame inside the canvas which will be scrolled with it
+        self.interior = interior = Frame(self.canvas)
+        interior_id = self.canvas.create_window(0, 0, window=interior,
+                                           anchor='nw')
 
-# tab_control.add(tab1, text='First')
+        # track changes to the canvas and frame width and sync them,
+        # also updating the scrollbar
+        def _configure_interior(event):
+            # update the scrollbars to match the size of the inner frame
+            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
+            self.canvas.config(scrollregion="0 0 %s %s" % size)
+            if interior.winfo_reqwidth() != self.canvas.winfo_width():
+                # update the canvas's width to fit the inner frame
+                self.canvas.config(width=interior.winfo_reqwidth())
+        interior.bind('<Configure>', _configure_interior)
 
-# tab_control.add(tab2, text='Second')
+        def _configure_canvas(event):
+            if interior.winfo_reqwidth() != self.canvas.winfo_width():
+                # update the inner frame's width to fill the canvas
+                self.canvas.itemconfigure(interior_id, width=self.canvas.winfo_width())
+        self.canvas.bind('<Configure>', _configure_canvas)
 
-# lbl1 = Label(tab1, text= 'label1')
 
-# lbl1.grid(column=0, row=0)
+# if __name__ == "__main__":
 
-# lbl2 = Label(tab2, text= 'label2')
+    # class SampleApp(Tk):
+        # def __init__(self, *args, **kwargs):
+            # root = Tk.__init__(self, *args, **kwargs)
+            # root = Tk()
 
-# lbl2.grid(column=0, row=0)
+root = Tk()
 
-# tab_control.pack(expand=1, fill='both')
+frame = VerticalScrolledFrame(root)
+frame.pack()
+# label = Label(text="Shrink the window to activate the scrollbar.")
+# label.pack()
+# buttons = []
+for i in range(15):
+    Button(frame.interior, text="Button " + str(i)).pack()
+    # buttons[-1].pack()
 
-# window.mainloop()
+def scrollUp(event):
+    frame.canvas.yview_scroll(-1, 'units')
+
+def scrollDown(event):
+    frame.canvas.yview_scroll(1, 'units')
+
+root.bind('<Button-4>', scrollUp)
+root.bind('<Button-5>', scrollDown)
+
+root.mainloop()
+
+# app = SampleApp()
+# app.mainloop()
+
+'''

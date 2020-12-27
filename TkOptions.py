@@ -17,7 +17,7 @@ def rgbToHex(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code"""
     return f'#{int(rgb[0]):02x}{int(rgb[1]):02x}{int(rgb[2]):02x}'
 
-RESET_FILE = True
+RESET_FILE = False
 
 SETTINGS_FILE = DIR + '/settings.json'
 FUNC_TYPES = (FunctionType, BuiltinFunctionType, BuiltinMethodType, LambdaType, MethodWrapperType, MethodType)
@@ -116,7 +116,7 @@ class Option:
         with open(SETTINGS_FILE, "w") as jsonFile:
             json.dump(data, jsonFile)
 
-    def create(self, root):
+    def create(self, root, **kwparams):
         if self.type == int:
             self._value = tk.IntVar(root, self.value)
         elif self.type == bool:
@@ -133,7 +133,7 @@ class Option:
             # self._value = tk.StringVar(r)
 
         if len(self.name): # and self.type is not bool:
-            self.label = tk.Label(root, text=self.name)
+            self.label = tk.Label(root, text=self.name, pady=0)
             self.label.pack()
 
         if self.type is int:
@@ -148,7 +148,7 @@ class Option:
             # self.element.bind('<Button-1>', self.invertCheckbox)
 
         elif self.type is str:
-            self.element = tk.Entry(root, text=self.startText, textvariable=self._value)
+            self.element = tk.Entry(root, text=self.startText, textvariable=self._value, , exportselection=False)
 
         elif self.type in (tuple, list):
             # NOTE: Not tk.Combobox
@@ -160,6 +160,10 @@ class Option:
 
         elif self.type in FUNC_TYPES:
             self.element = tk.Button(root, command=self.callback, text=self.widgetText)
+
+        for key, val in kwparams.items():
+            # print(f'[{key}, {val}]')
+            self.element[key] = val
 
         self.element.pack()
         if self.tooltip is not None:

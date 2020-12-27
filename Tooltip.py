@@ -5,8 +5,8 @@ class Tooltip(object):
     create a tooltip for a given widget
     """
     def __init__(self, widget, text=''):
-        self.waittime = 500     #miliseconds
-        self.wraplength = 180   #pixels
+        self.waittime = 500     # miliseconds
+        self.wraplength = 180   # pixels
         self.widget = widget
         self.text = text
         self.widget.bind("<Enter>", self.enter)
@@ -38,6 +38,13 @@ class Tooltip(object):
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 20
         # creates a toplevel window
+        # NOTE: To make this line work, in tkinter/__init.__.py in the tkinter package, on line
+        # 2345 (last I checked) delete the parenthesis on root.title() from 
+        # self.title(root.title())
+        # to 
+        # self.title(root.title)
+        # I don't know why this is an error, nor how to fix it. I can only assume it's a bug in tkinter?
+        # Or more likely, I'm doing something wrong.
         self.tw = tk.Toplevel(self.widget)
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
