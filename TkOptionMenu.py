@@ -3,21 +3,31 @@ from tkinter.ttk import *
 from tkinter import ttk
 from enum import Enum
 from ScrolledFrame import ScrolledFrame
+import re, time
 
 # Find the nice piano song at the end of Soul (the movie)
 #   learn to play it on guitar?
 
 SCROLL_SPEED = 1
-SCREEN_WIDTH_DIVISOR  = 1.3
-SCREEN_HEIGHT_DIVISOR = 1.3
+SCREEN_WIDTH_DIVISOR  = 1.1
+SCREEN_HEIGHT_DIVISOR = 1.1
+
 
 class OptionsMenu(ScrolledFrame):
-    def __init__(self, master, *options):
-        super().__init__(master)
-        self.master = master
-        self.master.title = 'Options'
-        self.master.maxsize(int(self.winfo_screenwidth() / SCREEN_WIDTH_DIVISOR), int(self.winfo_screenheight() / SCREEN_HEIGHT_DIVISOR))
-        self.master.minsize(500,  300)
+    def __init__(self, win, *options):
+        super().__init__(win)
+        self.win = win
+        self.win.title = 'Options'
+        self.win.maxsize(int(self.winfo_screenwidth() / SCREEN_WIDTH_DIVISOR), int(self.winfo_screenheight() / SCREEN_HEIGHT_DIVISOR))
+        # self.win.minsize(int(self.winfo_screenwidth() / (SCREEN_WIDTH_DIVISOR + .9)), int(self.winfo_screenheight() / (SCREEN_HEIGHT_DIVISOR + .9)))
+        self.win.minsize(500, 300)
+        # winSize = re.findall(r'\d+', self.master.winfo_geometry())
+        # print(self.winfo_geometry())
+        # print(winSize)
+        # print(int(int(winSize[0]) / 2))
+        screenXpos = int((self.winfo_screenwidth()  / 2) - 250) # (int(winSize[0]) / 2))
+        screenYpos = int((self.winfo_screenheight() / 2) - 150) # (int(winSize[1]) / 2))
+        self.win.wm_geometry(f'+{screenXpos}+{screenYpos}')
 
         self.options = options
         self.tabNames = []
@@ -51,18 +61,30 @@ class OptionsMenu(ScrolledFrame):
         for cnt, i in enumerate(self.tabs):
             self.notebook.add(i, text=self.tabNames[cnt])
 
-        self.master.bind('<Escape>', self.exit)
-        self.master.bind('o', self.exit)
-        self.master.bind('<Return>', self.save)
-        self.master.bind('<Button-4>', scrollUp)
-        self.master.bind('<Button-5>', scrollDown)
+        self.win.bind('<Escape>', self.exit)
+        self.win.bind('o', self.exit)
+        self.win.bind('<Return>', self.save)
+        self.win.bind('<Button-4>', scrollUp)
+        self.win.bind('<Button-5>', scrollDown)
+        # self.win.bind('<Configure>', self.configWin)
+        # self.win.bind('<Configure>', self.reconfigure)
+        def tmp(event):
+            if event.y:
+                self.configure(width=event.width, height=event.height)
+        #     if event.y:
+        #         print(event)
+        # self.win.bind('<Configure>', tmp)
         # self.master.bind('<Enter>', self.save)
 
         self.notebook.pack(fill='both', side='top')
         tk.Label(self, text='\n').pack(side='bottom')
-        tk.Button(self, text="Cancel", command=self.master.destroy).pack(side='bottom')
+        tk.Button(self, text="Cancel", command=self.win.destroy).pack(side='bottom')
         tk.Button(self, text='Save', command=self.save).pack(side='bottom')
         tk.Button(self, text='Restore to Defaults', command=self.restore).pack(side='bottom')
+
+    # def configWin(self, event):
+    #     if event.y:
+    #         self.win. (height=event.height, width=event.width)
 
     def restore(self):
         for k in self.options:
@@ -75,7 +97,7 @@ class OptionsMenu(ScrolledFrame):
             for i in k:
                 # print(i.name, ': ', i.value, ', ', i._value, sep='')
                 i.update()
-        self.master.destroy()
+        self.win.destroy()
 
     def exit(self, notSure):
-        self.master.destroy()
+        self.win.destroy()

@@ -23,7 +23,7 @@ class Romance(Enum):
 
 #* How each generation is generated
 class GenGen(Enum):
-    familyLine = auto() # Choose one couple, and all the ants in a generation are children of that couple
-    induvidual = auto() # Repeat the Romance method for n times to get n couples, and the ants in a generation are children of those parents (all couples have approximately the same number of children)
-    none       = auto() # Every generation is completely random, every time
+    familyLine   = auto() # Choose one couple, and all the ants in a generation are children of that couple
+    induvidual   = auto() # Repeat the Romance method for n times to get n couples, and the ants in a generation are children of those parents (all couples have approximately the same number of children)
+    none         = auto() # Every generation is completely random, every time
     mutationOnly = auto() # Instead of breeding, each generation is comprised of mutations of the selected couple (either mother or father, randomly chosen)

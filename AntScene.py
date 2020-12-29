@@ -1,11 +1,13 @@
 from Scene     import *
 from Point     import *
-from Ant       import Ant
+from Ant       import *
 from Food      import Food
 from copy      import deepcopy
 from tkinter   import *
 from TkOptions import *
-
+from Methods   import *
+from random    import randint, choice
+from CreateOptionMenu import createOptionMenu
 
 class AntScene(Scene):
     food = []
@@ -13,8 +15,12 @@ class AntScene(Scene):
     maxFoods =              Option(100,   'Maximum Foods Spawned')
     genSize =               Option(100,   'How many ants per generation')
     framesPerGeneration =   Option(300,   'How long each generation lasts')
-    doBreeding =            Option(False,  'Breed, or only mutate', widgetText='Do Breeding')
-    autoBreed =             Option(True,   'Whether a new generation will be created after a time', widgetText='Auto-Breed')
+    doBreeding =            Option(True,  'Breed, or only mutate', widgetText='Do Breeding')
+    autoBreed =             Option(True,  'Whether a new generation will be created after a time', widgetText='Auto-Breed')
+    romanceWinnerProbWeight=Option(1,     'How much romance.winnerProb is weighted')
+    romanceGroupWinnerSecondGroupSize = Option(20, 'How big of a group to select from in romance.groupWinnerSecond')
+    romanceInbredN =        Option(8,     'How many end children to inbreed together in romance.inbreed (must be a power of 2)')
+    includeParents =        Option(True,  'Whether we should add the parents of the previous generation to the new generation')
 
     def init(self, **params):
         self.ants = []
@@ -62,6 +68,56 @@ class AntScene(Scene):
             self.checkAnts()
 
         return self._menu
+
+
+    # inbred:             Breed the top 2^n creatures with their next best creature, and do that over and over until there's one left
+
+    def selectAnts(self, method=None):
+        if method is None:
+            method = self.romanceMethod
+        
+        returnAnts = []
+
+        if method == Romance.induvidual:
+            tmp = choice(self.ants)
+            returnAnts.append(tmp)
+            del self.ants[self.ants.index(tmp)]
+            returnAnts.append(choice(self.ants))
+
+        if method == Romance.winnerSecond:
+            self.ants.sort()
+            returnAnts = self.ants[0:1]
+
+        if method == Romance.winnerProb:
+            chanceList = []
+            self.ants.sort()
+
+            for cnt, ant in enumerate(self.ants):
+                chanceList += [ant] * (cnt * ~self.romanceWinnerProbWeight)
+            
+            returnAnts.append(choice(chanceList))
+            returnAnts.append(choice(chanceList))
+
+        if method == Romance.groupWinnerSecond:
+            group = []
+
+            for i in range(~self.romanceGroupWinnerSecondGroupSize):
+                tmp = choice(self.ants)
+                group.append(tmp)
+                del self.ants[self.ants.index(tmp)]
+
+            group.sort()
+            returnAnts = group[0:1]
+
+        if method == Romance.inbred:
+            def breedOnce(amt, ants):
+                ants.sort()
+                for i in range(int(amt / 2)):
+                    ants[i*2]
+
+
+
+        return returnAnts
 
 
     def checkAnts(self):
@@ -125,13 +181,14 @@ class AntScene(Scene):
             self.newGen()
 
         if key == 'o':
-            # self.switchMenu('OptionsMenu')
+            # antMembers = getOptions(Ant)
+            # myMembers  = [getattr(self, attr) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") and type(getattr(self, attr)) == Option]
+            # # antMembers += [minCutoffBreedingLen, minBreedingMultiCuts, maxBreedingMultiCuts]
 
-            ant = Ant()
-            antMembers = [getattr(ant,  attr) for attr in dir(ant)  if not callable(getattr(ant,  attr)) and not attr.startswith("__") and type(getattr(ant,  attr)) == Option]
-            myMembers  = [getattr(self, attr) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") and type(getattr(self, attr)) == Option]
-            OptionsMenu(tk.Tk(className='Options'), ['Ant'] + antMembers, ['Global'] + myMembers).mainloop()
-            time.sleep(.15) # Escape debouncing
+            # globalMembers = getOptions()
+            # OptionsMenu(tk.Tk(className='Options'), ['Ant'] + antMembers, ['Global'] + myMembers).mainloop()
+            # time.sleep(.15) # Escape debouncing
+            createOptionMenu(AntScene, Ant, AntScene='Global', Global='Breeding & Mutating')
 
         if key == 'up':
             self.speedx.value += 1
@@ -142,3 +199,6 @@ class AntScene(Scene):
             self.speedx.value = 1
         if key == 'right':
             self.speedx.value += 3
+
+
+

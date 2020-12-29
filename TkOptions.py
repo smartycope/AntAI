@@ -23,6 +23,16 @@ SETTINGS_FILE = DIR + '/settings.json'
 FUNC_TYPES = (FunctionType, BuiltinFunctionType, BuiltinMethodType, LambdaType, MethodWrapperType, MethodType)
 
 
+def getOptions(obj=None):
+    ''' Gets all the Option members in the passed in class. The passed in class must have a default constructor. '''
+    if obj is None:
+        options = [globals()[attr] for attr in globals() if not callable(globals()[attr]) and not attr.startswith("__") and type(globals()[attr]) == Option]
+    else:
+        options = [getattr(obj, attr) for attr in dir(obj) if not callable(getattr(obj, attr)) and not attr.startswith("__") and type(getattr(obj, attr)) == Option]
+    return options
+
+
+
 class Option:
     def __init__(self, value, label='', currentItem=None, widgetText='', tooltip=None, min=None, max=None, _type=None, params=(), kwparams={}):
         self.defaultValue = value
@@ -90,8 +100,14 @@ class Option:
 
             self.restoreDefault()
         else:
-            with open(SETTINGS_FILE, 'r+') as f:
-                self.value = json.load(f)[self.name]
+            # If we have just added a new option in code, it will throw an error. Catch that error, restore to defaults, and try again
+            try:
+                with open(SETTINGS_FILE, 'r+') as f:
+                    self.value = json.load(f)[self.name]
+            except KeyError:
+                self.restoreDefault()
+                with open(SETTINGS_FILE, 'r+') as f:
+                    self.value = json.load(f)[self.name]
 
     def callback(self):
         self._value = self.func(*self.params, **self.kwparams)
@@ -99,8 +115,10 @@ class Option:
     def restoreDefault(self):
         print(f'Reseting {self.value} to {self.defaultValue}')
         self.value = self.defaultValue
-        if self._value is not None:
+        if self._value is not None and self.type != 'color':
             self._value.set(self.defaultValue)
+        elif self.type =='color':
+            self._value = self.defaultValue
 
         try:
             with open(SETTINGS_FILE, "r") as jsonFile:
@@ -148,7 +166,7 @@ class Option:
             # self.element.bind('<Button-1>', self.invertCheckbox)
 
         elif self.type is str:
-            self.element = tk.Entry(root, text=self.startText, textvariable=self._value, , exportselection=False)
+            self.element = tk.Entry(root, text=self.startText, textvariable=self._value, exportselection=False)
 
         elif self.type in (tuple, list):
             # NOTE: Not tk.Combobox
@@ -216,4 +234,10 @@ class Option:
         with open(SETTINGS_FILE, "w") as jsonFile:
             json.dump(data, jsonFile)
 
+    def __lt__(self, option):
+        order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
+        return order.index(self.type) < order.index(option.type)
 
+    def __gt__(self, option):
+        order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
+        return order.index(self.type) > order.index(option.type)

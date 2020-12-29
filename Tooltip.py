@@ -37,21 +37,16 @@ class Tooltip(object):
         x, y, cx, cy = self.widget.bbox("insert")
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 20
+
         # creates a toplevel window
-        # NOTE: To make this line work, in tkinter/__init.__.py in the tkinter package, on line
-        # 2345 (last I checked) delete the parenthesis on root.title() from 
-        # self.title(root.title())
-        # to 
-        # self.title(root.title)
-        # I don't know why this is an error, nor how to fix it. I can only assume it's a bug in tkinter?
-        # Or more likely, I'm doing something wrong.
+        # This line is a hack, because I keep getting an error I can't prevent.
+        self.widget._root().title = lambda: ''
         self.tw = tk.Toplevel(self.widget)
+        
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
-        label = tk.Label(self.tw, text=self.text, justify='left',
-                       background="#ffffff", relief='solid', borderwidth=1,
-                       wraplength = self.wraplength)
+        label = tk.Label(self.tw, text=self.text, justify='left', background="#ffffff", relief='solid', borderwidth=1, wraplength = self.wraplength, fg="#000000")
         label.pack(ipadx=1)
 
     def hidetip(self):
