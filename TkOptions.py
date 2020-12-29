@@ -22,11 +22,17 @@ RESET_FILE = False
 SETTINGS_FILE = DIR + '/settings.json'
 FUNC_TYPES = (FunctionType, BuiltinFunctionType, BuiltinMethodType, LambdaType, MethodWrapperType, MethodType)
 
+globalsDict = globals()
 
-def getOptions(obj=None):
+def getOptions(obj=None, namespace=None):
     ''' Gets all the Option members in the passed in class. The passed in class must have a default constructor. '''
+    global globalsDict
+
     if obj is None:
-        options = [globals()[attr] for attr in globals() if not callable(globals()[attr]) and not attr.startswith("__") and type(globals()[attr]) == Option]
+        if namespace is None:
+            options = [globalsDict[attr] for attr in globalsDict if not callable(globalsDict[attr]) and not attr.startswith("__") and type(globalsDict[attr]) == Option]
+        else:
+            options = [namespace[attr] for attr in namespace if not callable(namespace[attr]) and not attr.startswith("__") and type(namespace[attr]) == Option]            
     else:
         options = [getattr(obj, attr) for attr in dir(obj) if not callable(getattr(obj, attr)) and not attr.startswith("__") and type(getattr(obj, attr)) == Option]
     return options
@@ -134,7 +140,7 @@ class Option:
         with open(SETTINGS_FILE, "w") as jsonFile:
             json.dump(data, jsonFile)
 
-    def create(self, root, **kwparams):
+    def create(self, root, row, column, **kwparams):
         if self.type == int:
             self._value = tk.IntVar(root, self.value)
         elif self.type == bool:
@@ -151,8 +157,11 @@ class Option:
             # self._value = tk.StringVar(r)
 
         if len(self.name): # and self.type is not bool:
-            self.label = tk.Label(root, text=self.name, pady=0)
-            self.label.pack()
+            # self.label = 
+            tk.Label(root, text=self.name, pady=0).grid(row=row.get() - 1, column=column.get())
+            column.set(column.get() + 1)
+            # self.label.pack()
+            # print(row.get())
 
         if self.type is int:
             self.element = tk.Spinbox(root, from_=self.min, to=self.max, textvariable=self._value)
@@ -183,7 +192,8 @@ class Option:
             # print(f'[{key}, {val}]')
             self.element[key] = val
 
-        self.element.pack()
+        self.element.grid(row=row.get(), column=column.get())
+        column.set(column.get() + 1)
         if self.tooltip is not None:
             self.tooltipObj = Tooltip(self.element, self.tooltip)
 
