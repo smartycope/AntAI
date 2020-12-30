@@ -45,6 +45,7 @@ def getOptions(obj=None, namespace=None):
 
 class Option:
     order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
+    
     def __init__(self, value, label='', currentItem=None, widgetText='', tooltip=None, min=None, max=None, _type=None, params=(), kwparams={}):
         self.defaultValue = value
         self.type = _type

@@ -81,29 +81,27 @@ How each generation is generated\n
 
 
 #* Options
-breedingCutoffMinLen =              Option(10,  'I don\'t remember what this does',                                                     tooltip='(breedingCutoffMinLen)')
-breedingMultiCutsMin =              Option(3,   'The minimum amount of cuts multicut cuts',                                             tooltip='(breedingMultiCutsMin)')
-breedingMultiCutsMax =              Option(20,  'The maximum amount of cuts multicut cuts',                                             tooltip='(breedingMultiCutsMax)')
-mutationsChunkMinLen =              Option(5,   'The minimum amount of movements a chunk can have',                                     tooltip='(mutationsChunkMinLen)')
-mutationsChunkDivisor =             Option(1.1, 'What amount of the end of the dna to disallow chunking',                               tooltip='(mutationsChunkDivisor)')
-mutationsInduvidualChance =         Option(30,  'The percent chance for each movement to be mutated',                                   tooltip='(mutationsInduvidualChance)')
-romanceWinnerProbWeight =           Option(1,   'How much romance.winnerProb is weighted',                                              tooltip='(romanceWinnerProbWeight)')
-romanceGroupWinnerSecondGroupSize = Option(20,  'How big of a group to select from in romance.groupWinnerSecond',                       tooltip='(romanceGroupWinnerSecondGroupSize)')
-romanceInbredN =                    Option(8,   'How many end children to inbreed together in romance.inbreed (must be a power of 2)',  tooltip='(romanceInbredN)')
-genGenInduvidualNumCouples =        Option(10,  'Number of Couples',                                                                    tooltip='The "n" in GenGen Induvidual\n(genGenInduvidualNumCouples)')
-genGenIncludeParents =              Option(True, widgetText='Include Parents',                                                          tooltip='Whether we should add the parents of the previous generation to the new generation\n(genGenIncludeParents)')
-doMutation =                        Option(True, widgetText='Mutate',                                                                   tooltip='Whether or not to mutate each Generation\n(doMutation)')
+breedingCutoffMinLen =              Option(10,  'I don\'t remember what this does', tooltip='(breedingCutoffMinLen)')
+breedingMultiCutsMin =              Option(3,   'Min multiCuts',                    tooltip='The minimum amount of cuts multicut cuts\n(breedingMultiCutsMin)')
+breedingMultiCutsMax =              Option(20,  'Max multiCuts',                    tooltip='The maximum amount of cuts multicut cuts\n(breedingMultiCutsMax)')
+mutationsChunkMinLen =              Option(5,   'Minimum chunk length',             tooltip='The minimum amount of movements a chunk can have\n(mutationsChunkMinLen)')
+mutationsChunkDivisor =             Option(1.1, 'No longer used',                   tooltip='What amount of the end of the dna to disallow chunking/n(mutationsChunkDivisor)')
+mutationsInduvidualChance =         Option(30,  'Induvitual mutation chance',       tooltip='The percent chance for each movement to be mutated\n(mutationsInduvidualChance)')
+romanceWinnerProbWeight =           Option(1,   'WinnerProb probibility weight',    tooltip='How much romance.winnerProb is weighted\n(romanceWinnerProbWeight)')
+romanceGroupWinnerSecondGroupSize = Option(20,  'Group Size for GroupWinnerSecond', tooltip='How many end children to inbreed together in romance.inbreed (must be a power of 2)\n(romanceGroupWinnerSecondGroupSize)')
+romanceInbredN =                    Option(8,   'Inbreeding count',                 tooltip='How many end children to inbreed together in romance.inbreed (must be a power of 2)\n(romanceInbredN)')
+genGenInduvidualNumCouples =        Option(10,  'Number of Couples',                tooltip='The "n" in GenGen Induvidual\n(genGenInduvidualNumCouples)')
+genGenIncludeParents =              Option(True, widgetText='Include Parents',      tooltip='Whether we should add the parents of the previous generation to the new generation\n(genGenIncludeParents)')
+doMutation =                        Option(True, widgetText='Mutate',               tooltip='Whether or not to mutate each Generation\n(doMutation)')
 
-mutationMethod =                    Option(Mutations, 'Which Mutation method to use', Mutations.chunk,                                  tooltip=mutationsTooltip)
-breedingMethod =                    Option(Breeding,  'Which breeding method to use', Breeding.induvidual,                              tooltip=breedingTooltip)
-romanceMethod =                     Option(Romance,   'Which method of selecting ants to be bred to use', Romance.winnerSecond,         tooltip=romanceTooltip)
-genGenMethod =                      Option(GenGen,    'Which method of generating the next Generation to use', GenGen.familyLine,       tooltip=GenGenTooltip)
-
-
+mutationMethod =                    Option(Mutations, 'Which Mutation method to use', Mutations.chunk,                            tooltip=mutationsTooltip)
+breedingMethod =                    Option(Breeding,  'Which breeding method to use', Breeding.induvidual,                        tooltip=breedingTooltip)
+romanceMethod =                     Option(Romance,   'Which method of selecting ants to be bred to use', Romance.winnerSecond,   tooltip=romanceTooltip)
+genGenMethod =                      Option(GenGen,    'Which method of generating the next Generation to use', GenGen.familyLine, tooltip=GenGenTooltip)
 
 
 def selectAnts(ants, method=romanceMethod):
-    if type(method) == str:
+    if type(method.value) == str:
         method = getattr(Romance, ~method)
 
     returnAnts = []
@@ -117,7 +115,7 @@ def selectAnts(ants, method=romanceMethod):
     if method == Romance.winnerSecond:
         ants.sort()
         returnAnts = ants[0:2]
-
+        
     if method == Romance.winnerProb:
         chanceList = []
         ants.sort()
@@ -153,7 +151,7 @@ def selectAnts(ants, method=romanceMethod):
 
 
 def mutate(ant, method=mutationMethod):
-    if type(method) == str:
+    if type(method.value) == str:
         method = getattr(Mutations, ~method)
 
     mutated = Ant()
@@ -190,7 +188,7 @@ def mutate(ant, method=mutationMethod):
     
 
 def breed(father, mother, method=breedingMethod):
-    if type(method) == str:
+    if type(method.value) == str:
         method = getattr(Breeding, ~method)
 
     # I don't care what the parameters actually are, the father is the ant with the longer dna list
@@ -244,7 +242,7 @@ def breed(father, mother, method=breedingMethod):
 
 
 def generateGeneration(ants, genSize: Option, method=genGenMethod, breedMethod=breedingMethod, selectionMethod=romanceMethod, mutateMethod=mutationMethod, generation:int=None) -> list:
-    if type(method) == str:
+    if type(method.value) == str:
         method = getattr(GenGen, ~method)
 
     debug(method)
@@ -299,62 +297,3 @@ def generateGeneration(ants, genSize: Option, method=genGenMethod, breedMethod=b
 
     return newGen
 
-
-
-
-
-
-
-
-
-
-'''
-    if ~self.doBreeding:
-        # Create a new generation of ants based on the champiant and the second place champiant
-        runnerUp = ants[1]
-
-        ants = []
-        # champiant.pos = Pointi(self.center)
-        # runnerUp.pos  = Pointi(self.center)
-        # ants.append(champiant)
-        # ants.append(runnerUp)
-        for _ in range(~self.genSize):
-            ants.append(Ant(father=deepcopy(champiant), mother=deepcopy(runnerUp), mutationChance=self.mutationChance, center=self.center))
-
-    else:
-        # Create a new generation of ants based on the champiant's DNA (the path it took)
-        ants = []
-        champiant.pos = Pointi(self.center)
-        ants.append(champiant)
-        for _ in range(~self.genSize):
-            ant = Ant(mutationChance=0, center=self.center)
-            ant.dna = deepcopy(champiant.dna)
-            if percent(self.mutationChance):
-                ant.mutate(ant.mutationMethod)
-            ants.append(ant)
-
-'''
-
-
-# For testing mutliCutoff
-'''
-def multiCutoff(father, mother):
-    indecies = [randint(0, len(father) - minCutoffBreedingLen) for _ in range(randint(minBreedingMultiCuts, maxBreedingMultiCuts))]
-    indecies.sort()
-    # Just to make the loop a little easier
-    indecies.append(0)
-    chunks = []
-    for i in range(len(indecies) - 1):
-        if i % 2:
-            chunks.append(father[indecies[i-1]:indecies[i]])
-            father = father[indecies[i]:]
-        else:
-            chunks.append(mother[indecies[i-1]:indecies[i]])
-            mother = mother[indecies[i]:]
-    child = []
-    for i in chunks:
-        child.extend(i)
-    return child
-
-multiCutoff(all1, all0)
-'''
