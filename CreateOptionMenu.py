@@ -15,29 +15,37 @@ from TkOptions import *
 from Ant import *
 from AntScene import *
 from TkOptionMenu import *
+from threading import Thread 
 
 namespace = globals()
 
-def createOptionMenu(*classes, getGlobal=True, windowName='Options', sort=True, **names):
+def createOptionMenu(*instances, getGlobal=True, windowName='Options', sort=True, nonBlocking=False, **names):
     members = {}
     
     if 'Global' in names.keys():
         names['NoneType'] = names['Global']
 
     if getGlobal:
-        classes += (type(None),)
+        instances += (None,)
 
-    for i in classes:
+    for i in instances:
         members[i] = getOptions(i)
         if sort:
             members[i].sort()
 
     if getGlobal:
-        members[type(None)] = getOptions(namespace=namespace)
+        members[None] = getOptions(namespace=namespace)
         if sort:
-            members[type(None)].sort()
+            members[None].sort()
 
-    # print(getOptions(namespace=namespace))
+    className = lambda var: var.__class__.__name__
 
-    OptionsMenu(tk.Tk(className=windowName), *[[i.__name__ if i.__name__ not in names.items() else names[i.__name__]] + members[i] for i in classes]).mainloop()
+    # Tkinter is not (sorta) thread safe
+    if nonBlocking and False:
+        thread = Thread(target=lambda: OptionsMenu(tk.Tk(className=windowName), *[[className(i) if className(i) not in names.keys() else names[className(i)]] + members[i] for i in instances]).mainloop()) 
+        thread.start()
+        thread.join()
+    else:
+        OptionsMenu(tk.Tk(className=windowName), *[[className(i) if className(i) not in names.keys() else names[className(i)]] + members[i] for i in instances]).mainloop()
+
     time.sleep(.15) # Escape debouncing

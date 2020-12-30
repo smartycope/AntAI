@@ -359,6 +359,8 @@ class Pointf:
 from random import randint
 import math
 
+debugCount = 0
+
 # TODO This only returns integers at the moment
 def randomPointf(minX=0, maxX=100, minY=0, maxY=100):
     return Pointf(randint(minX, maxX), randint(minY, maxY))
@@ -378,88 +380,48 @@ def percent(percentage):
     return randint(1, 100) < percentage
 
 
-'''
+def debug(var=None, *more_vars, prefix: str='', merge: bool=False, repr: bool=True) -> None: # pylint: disable=redefined-builtin
+    """Print variable names and values.
 
-from tkinter import *   # from x import * is bad practice
-from tkinter.ttk import *
+    Examples:
+        >>> a = 1
+        >>> b = object
+        >>> print(f'a={a}') # previously, we have to do
+        >>> print(f'{a=}')  # or with python3.8
+        >>> # instead we can do:
+        >>> debug(a) # DEBUG: a=1
+        >>> debug(a, prefix='') # a=1
+        >>> debug(a, b, merge=True) # a=1, b=<object object at 0x2b9a4c89cf00>
 
-# http://tkinter.unpythonic.net/wiki/VerticalScrolledFrame
-
-class VerticalScrolledFrame(Frame):
-    """A pure Tkinter scrollable frame that actually works!
-    * Use the 'interior' attribute to place widgets inside the scrollable frame
-    * Construct and pack/place/grid normally
-    * This frame only allows vertical scrolling
-
+    Args:
+        var: The variable to print
+        *more_vars: Other variables to print
+        prefix: A prefix to print for each line
+        merge: Whether merge all variables in one line or not
+        repr: Print the value as `repr(var)`? otherwise `str(var)`
     """
-    def __init__(self, parent, *args, **kw):
-        Frame.__init__(self, parent, *args, **kw)            
+    from varname import nameof
 
-        # create a canvas object and a vertical scrollbar for scrolling it
-        self.vscrollbar = Scrollbar(self, orient='vertical')
-        self.vscrollbar.pack(fill='y', side='right', expand=0)
-        self.canvas = Canvas(self, bd=0, highlightthickness=0,
-                        yscrollcommand=self.vscrollbar.set)
-        self.canvas.pack(side='left', fill='both', expand=1)
-        self.vscrollbar.config(command=self.canvas.yview)
+    global debugCount
+    debugCount += 1
 
-        # reset the view
-        self.canvas.xview_moveto(0)
-        self.canvas.yview_moveto(0)
+    if var is None:
+        print(f'{debugCount}: HERE! HERE!')
+        return
 
-        # create a frame inside the canvas which will be scrolled with it
-        self.interior = interior = Frame(self.canvas)
-        interior_id = self.canvas.create_window(0, 0, window=interior,
-                                           anchor='nw')
+    var_names = nameof(var, *more_vars, caller=2)
 
-        # track changes to the canvas and frame width and sync them,
-        # also updating the scrollbar
-        def _configure_interior(event):
-            # update the scrollbars to match the size of the inner frame
-            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
-            self.canvas.config(scrollregion="0 0 %s %s" % size)
-            if interior.winfo_reqwidth() != self.canvas.winfo_width():
-                # update the canvas's width to fit the inner frame
-                self.canvas.config(width=interior.winfo_reqwidth())
-        interior.bind('<Configure>', _configure_interior)
+    if not isinstance(var_names, tuple):
+        var_names = (var_names, )
 
-        def _configure_canvas(event):
-            if interior.winfo_reqwidth() != self.canvas.winfo_width():
-                # update the inner frame's width to fill the canvas
-                self.canvas.itemconfigure(interior_id, width=self.canvas.winfo_width())
-        self.canvas.bind('<Configure>', _configure_canvas)
+    variables = (var, *more_vars)
+    name_and_values = [f"{var_name} = {variables[i]!r}" if repr
+                       else f"{var_name} = {variables[i]}"
+                       for i, var_name in enumerate(var_names)]
+    if merge:
+        print(f"{debugCount}: {prefix}{', '.join(name_and_values)}")
+    else:
+        for name_and_value in name_and_values:
+            print(f"{debugCount}: {prefix}{type(var).__name__} {name_and_value}")
+            debugCount += 1
 
-
-# if __name__ == "__main__":
-
-    # class SampleApp(Tk):
-        # def __init__(self, *args, **kwargs):
-            # root = Tk.__init__(self, *args, **kwargs)
-            # root = Tk()
-
-root = Tk()
-
-frame = VerticalScrolledFrame(root)
-frame.pack()
-# label = Label(text="Shrink the window to activate the scrollbar.")
-# label.pack()
-# buttons = []
-for i in range(15):
-    Button(frame.interior, text="Button " + str(i)).pack()
-    # buttons[-1].pack()
-
-def scrollUp(event):
-    frame.canvas.yview_scroll(-1, 'units')
-
-def scrollDown(event):
-    frame.canvas.yview_scroll(1, 'units')
-
-root.bind('<Button-4>', scrollUp)
-root.bind('<Button-5>', scrollDown)
-
-root.mainloop()
-
-# app = SampleApp()
-# app.mainloop()
-
-'''

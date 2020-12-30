@@ -12,7 +12,7 @@ SCROLL_SPEED = 1
 SCREEN_WIDTH_DIVISOR  = 1.1
 SCREEN_HEIGHT_DIVISOR = 1.1
 
-
+"""
 class OptionsMenu(ScrolledFrame):
     def __init__(self, win, *options):
         super().__init__(win)
@@ -192,4 +192,3 @@ class OptionsMenu(ScrolledFrame):
 
     def exit(self, notSure):
         self.win.destroy()
-"""

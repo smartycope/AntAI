@@ -1,3 +1,5 @@
+from warnings import warn
+
 from Scene     import *
 from Point     import *
 from Ant       import *
@@ -11,44 +13,35 @@ from CreateOptionMenu import createOptionMenu
 
 class AntScene(Scene):
     food = []
-    minFoods =              Option(20,    'Minimum Foods Spawned')
-    maxFoods =              Option(100,   'Maximum Foods Spawned')
-    genSize =               Option(100,   'How many ants per generation')
-    framesPerGeneration =   Option(300,   'How long each generation lasts')
-    doBreeding =            Option(True,  'Breed, or only mutate', widgetText='Do Breeding')
-    autoBreed =             Option(True,  'Whether a new generation will be created after a time', widgetText='Auto-Breed')
-    romanceWinnerProbWeight=Option(1,     'How much romance.winnerProb is weighted')
-    romanceGroupWinnerSecondGroupSize = Option(20, 'How big of a group to select from in romance.groupWinnerSecond')
-    romanceInbredN =        Option(8,     'How many end children to inbreed together in romance.inbreed (must be a power of 2)')
-    includeParents =        Option(True,  'Whether we should add the parents of the previous generation to the new generation')
+    minFoods =              Option(20,    'Minimum Foods Spawned',                                                               tooltip='\n(minFoods)')
+    maxFoods =              Option(100,   'Maximum Foods Spawned',                                                               tooltip='\n(maxFoods)')
+    genSize =               Option(100,   'How many ants per generation',                                                        tooltip='\n(genSize)')
+    framesPerGeneration =   Option(300,   'How long each generation lasts',                                                      tooltip='\n(framesPerGeneration)')
+    autoBreed =             Option(True,  'Whether a new generation will be created after a time', widgetText='Auto-Breed',      tooltip='\n(autoBreed)')
+    homeColor =             Option([32, 60, 105], 'The home base color', _type='Color',                                          tooltip='\n(homeColor')
 
     def init(self, **params):
         self.ants = []
         self.foodCollected = 0
-        self.homeColor = Option([32, 60, 105], 'The home base color', _type='Color')
         self.generation = 0
         self.speedx = Option(1, 'How fast the simulation runs', min=1)
         self.mutationChance = 100
         self.currentFrame = 0
         # null, because there is no return type for __init__
-        self.null = Option(self.__init__, widgetText='Reset the Simulation', params=(self.mainSurface,), tooltip='Restart the simulation')
-
-        # Spawn food
-        # if not len(self.food):
-        #     for _ in range(randint(~self.minFoods, ~self.maxFoods)):
-        #         self.food.append(Food(size=self.getSize()))
+        self.null = Option(self.__init__, widgetText='Reset the Simulation', params=(self.mainSurface,), tooltip='Restart the simulation\n(null)')
 
         self.food = []
         for _ in range(randint(~self.minFoods, ~self.maxFoods)):
             self.food.append(Food(size=self.getSize()))
 
+        Ant.center = self.center
 
-        # Spawn ants
-        for _ in range(~self.genSize):
-           self.ants.append(Ant(center=self.center))
+        # Spawn the first generateion of ants
+        self.ants = generateGeneration(None, self.genSize, GenGen.none)
 
 
     def run(self, deltaTime):
+        # print(len(self.ants))
         for _ in range(~self.speedx):
             if ~self.autoBreed:
                 self.currentFrame += 1
@@ -70,56 +63,6 @@ class AntScene(Scene):
         return self._menu
 
 
-    # inbred:             Breed the top 2^n creatures with their next best creature, and do that over and over until there's one left
-
-    def selectAnts(self, method=None):
-        if method is None:
-            method = self.romanceMethod
-        
-        returnAnts = []
-
-        if method == Romance.induvidual:
-            tmp = choice(self.ants)
-            returnAnts.append(tmp)
-            del self.ants[self.ants.index(tmp)]
-            returnAnts.append(choice(self.ants))
-
-        if method == Romance.winnerSecond:
-            self.ants.sort()
-            returnAnts = self.ants[0:1]
-
-        if method == Romance.winnerProb:
-            chanceList = []
-            self.ants.sort()
-
-            for cnt, ant in enumerate(self.ants):
-                chanceList += [ant] * (cnt * ~self.romanceWinnerProbWeight)
-            
-            returnAnts.append(choice(chanceList))
-            returnAnts.append(choice(chanceList))
-
-        if method == Romance.groupWinnerSecond:
-            group = []
-
-            for i in range(~self.romanceGroupWinnerSecondGroupSize):
-                tmp = choice(self.ants)
-                group.append(tmp)
-                del self.ants[self.ants.index(tmp)]
-
-            group.sort()
-            returnAnts = group[0:1]
-
-        if method == Romance.inbred:
-            def breedOnce(amt, ants):
-                ants.sort()
-                for i in range(int(amt / 2)):
-                    ants[i*2]
-
-
-
-        return returnAnts
-
-
     def checkAnts(self):
         # Check if we're touching food
         for f in self.food:
@@ -137,35 +80,7 @@ class AntScene(Scene):
     def newGen(self):
         self.generation += 1
         self.currentFrame = 0
-
-        # Get the best ant
-        self.ants.sort()
-        champiant = self.ants[0]
-        print(f'The champiant of generation {self.generation} is:', champiant)
-
-        if ~self.doBreeding:
-            # Create a new generation of ants based on the champiant and the second place champiant
-            runnerUp = self.ants[1]
-
-            self.ants = []
-            # champiant.pos = Pointi(self.center)
-            # runnerUp.pos  = Pointi(self.center)
-            # self.ants.append(champiant)
-            # self.ants.append(runnerUp)
-            for _ in range(~self.genSize):
-                self.ants.append(Ant(father=deepcopy(champiant), mother=deepcopy(runnerUp), mutationChance=self.mutationChance, center=self.center))
-
-        else:
-            # Create a new generation of ants based on the champiant's DNA (the path it took)
-            self.ants = []
-            champiant.pos = Pointi(self.center)
-            self.ants.append(champiant)
-            for _ in range(~self.genSize):
-                ant = Ant(mutationChance=0, center=self.center)
-                ant.dna = deepcopy(champiant.dna)
-                if percent(self.mutationChance):
-                    ant.mutate(ant.mutationMethod)
-                self.ants.append(ant)
+        self.ants = generateGeneration(self.ants, self.genSize, generation=self.generation)
 
 
     def keyDown(self, event):
@@ -188,7 +103,7 @@ class AntScene(Scene):
             # globalMembers = getOptions()
             # OptionsMenu(tk.Tk(className='Options'), ['Ant'] + antMembers, ['Global'] + myMembers).mainloop()
             # time.sleep(.15) # Escape debouncing
-            createOptionMenu(AntScene, Ant, AntScene='Global', Global='Breeding & Mutating')
+            createOptionMenu(self, AntScene='Global', Global='Breeding & Mutating')
 
         if key == 'up':
             self.speedx.value += 1
@@ -199,6 +114,3 @@ class AntScene(Scene):
             self.speedx.value = 1
         if key == 'right':
             self.speedx.value += 3
-
-
-

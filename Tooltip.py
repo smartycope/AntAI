@@ -47,7 +47,8 @@ class Tooltip(object):
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
         label = tk.Label(self.tw, text=self.text, justify='left', background="#ffffff", relief='solid', borderwidth=1, wraplength = self.wraplength, fg="#000000")
-        label.grid(row=0, column=0) #.pack(ipadx=1)
+        # label.grid(row=0, column=0)
+        label.pack(ipadx=1)
 
     def hidetip(self):
         tw = self.tw

@@ -15,11 +15,11 @@ class ScrolledFrame(Frame):
 
         # create a canvas object and a vertical scrollbar for scrolling it
         vscrollbar = Scrollbar(self, orient='vertical')
-        # vscrollbar.pack(fill='y', side='right', expand=0)
-        vscrollbar.grid(row=10, column=0, columnspan=20)
+        vscrollbar.pack(fill='y', side='right', expand=0)
+        # vscrollbar.grid(row=10, column=0, columnspan=20)
         self.canvas = tk.Canvas(self, bd=False, highlightthickness=0, yscrollcommand=vscrollbar.set)
-        # self.canvas.pack(side='left', fill='both', expand=1)
-        self.canvas.grid(row=0, column=0, rowspan=20, columnspan=20)
+        self.canvas.pack(side='left', fill='both', expand=1)
+        # self.canvas.grid(row=0, column=0, rowspan=20, columnspan=20)
         vscrollbar.config(command=self.canvas.yview)
 
         # reset the view

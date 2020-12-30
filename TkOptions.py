@@ -13,6 +13,10 @@ from Tooltip import Tooltip
 
 import json
 
+
+# TODO: Option, if passed an enum, value will be a string to the option selected, instead of the actual Enum Option. I think it was intentional, but I don't like it now, so change it back.
+
+
 def rgbToHex(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code"""
     return f'#{int(rgb[0]):02x}{int(rgb[1]):02x}{int(rgb[2]):02x}'
@@ -40,6 +44,7 @@ def getOptions(obj=None, namespace=None):
 
 
 class Option:
+    order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
     def __init__(self, value, label='', currentItem=None, widgetText='', tooltip=None, min=None, max=None, _type=None, params=(), kwparams={}):
         self.defaultValue = value
         self.type = _type
@@ -140,7 +145,7 @@ class Option:
         with open(SETTINGS_FILE, "w") as jsonFile:
             json.dump(data, jsonFile)
 
-    def create(self, root, row, column, **kwparams):
+    def create(self, root, row=None, column=None, **kwparams):
         if self.type == int:
             self._value = tk.IntVar(root, self.value)
         elif self.type == bool:
@@ -158,8 +163,8 @@ class Option:
 
         if len(self.name): # and self.type is not bool:
             # self.label = 
-            tk.Label(root, text=self.name, pady=0).grid(row=row.get() - 1, column=column.get())
-            column.set(column.get() + 1)
+            tk.Label(root, text=self.name, pady=0).pack() #grid(row=row.get() - 1, column=column.get())
+            # column.set(column.get() + 1)
             # self.label.pack()
             # print(row.get())
 
@@ -192,8 +197,8 @@ class Option:
             # print(f'[{key}, {val}]')
             self.element[key] = val
 
-        self.element.grid(row=row.get(), column=column.get())
-        column.set(column.get() + 1)
+        self.element.pack() # grid(row=row.get(), column=column.get())
+        # column.set(column.get() + 1)
         if self.tooltip is not None:
             self.tooltipObj = Tooltip(self.element, self.tooltip)
 
@@ -245,9 +250,13 @@ class Option:
             json.dump(data, jsonFile)
 
     def __lt__(self, option):
-        order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
-        return order.index(self.type) < order.index(option.type)
+        return self.order.index(self.type) < self.order.index(option.type)
 
     def __gt__(self, option):
-        order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
-        return order.index(self.type) > order.index(option.type)
+        return self.order.index(self.type) > self.order.index(option.type)
+
+    def __str__(self):
+        return f'Option[{self.type}: {self.value}, {self._value}]'
+
+    def __repr__(self):
+        return f"Option[{self.type}: {self.value}, {self._value}]"
