@@ -12,6 +12,7 @@ from TkOptionMenu import OptionsMenu
 from Tooltip import Tooltip
 
 import json
+from Cope import reprise, debug
 
 
 # TODO: Option, if passed an enum, value will be a string to the option selected, instead of the actual Enum Option. I think it was intentional, but I don't like it now, so change it back.
@@ -42,7 +43,23 @@ def getOptions(obj=None, namespace=None):
     return options
 
 
+def getTrackers(obj=None, namespace=None):
+    ''' Gets all the Option members in the passed in class. The passed in class must have a default constructor. '''
+    global globalsDict
 
+    if obj is None:
+        if namespace is None:
+            options = [globalsDict[attr] for attr in globalsDict if not callable(globalsDict[attr]) and not attr.startswith("__") and type(globalsDict[attr]) == Tracker]
+        else:
+            options = [namespace[attr] for attr in namespace if not callable(namespace[attr]) and not attr.startswith("__") and type(namespace[attr]) == Tracker]            
+    else:
+        options = [getattr(obj, attr) for attr in dir(obj) if not callable(getattr(obj, attr)) and not attr.startswith("__") and type(getattr(obj, attr)) == Tracker]
+    return options
+
+
+
+
+@reprise
 class Option:
     order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
     
@@ -56,6 +73,7 @@ class Option:
 
         #* If value is an Enum
         if type(value) not in validTypeList and issubclass(value, Enum) and _type is None:
+            self.enum = value
             self.type = list
             self.options = [name for name, member in value.__members__.items()]
             if currentItem is not None:
@@ -65,6 +83,7 @@ class Option:
                 except AttributeError:
                     raise UserWarning("The value given to the option is not in the enum provided.")
         else:
+            self.enum = None
             self.value = value
             if _type is None:
                 self.type = type(value)
@@ -233,13 +252,22 @@ class Option:
         self.save()
 
     def get(self):
-        return self.value
-            
+        if self.enum is not None:
+            return getattr(self.enum, self.value)
+        else:
+            return self.value            
+    
     def __invert__(self):
-        return self.value
+        if self.enum is not None:
+            return getattr(self.enum, self.value)
+        else:
+            return self.value
 
     def truth(self):
-        return self.value
+        if self.enum is not None:
+            return getattr(self.enum, self.value)
+        else:
+            return self.value
     
     def save(self):
         with open(SETTINGS_FILE, "r") as jsonFile:
@@ -257,7 +285,90 @@ class Option:
         return self.order.index(self.type) > self.order.index(option.type)
 
     def __str__(self):
-        return f'Option[{self.type}: {self.value}, {self._value}]'
+        return f'Opt[{self.type}: {self.value}, {self._value}]'
 
-    def __repr__(self):
-        return f"Option[{self.type}: {self.value}, {self._value}]"
+
+
+
+@reprise
+class Tracker:
+    # order = [Enum, list, tuple, str, float, int, 'color', bool, *FUNC_TYPES]
+    
+    def __init__(self, variable, label='', tooltip=None):
+        self.tooltip = tooltip
+        self.value = variable
+        self.label = label
+        self._value = None
+        # if typ == int:
+        #     self._value = tk.IntVar(root, self.value)
+        # elif typ == bool:
+        #     self._value = tk.BooleanVar(root, self.value)
+        # elif typ == float:
+        #     self._value = tk.DoubleVar(root, self.value)
+        # elif typ in (str, tuple, list):
+        #     self._value = tk.StringVar(root, self.value)
+        # self.type = type(variable)
+
+    def create(self, root, row=None, column=None, **kwparams):
+        # self._value = tk.StringVar(root, self.value)
+        typ = type(self.value)
+        if typ == int:
+            self._value = tk.IntVar(root, self.value)
+        elif typ == bool:
+            self._value = tk.BooleanVar(root, self.value)
+        elif typ == float:
+            self._value = tk.DoubleVar(root, self.value)
+
+        tk.Label(root, text=self.label, pady=0).pack() #grid(row=row.get() - 1, column=column.get())
+        self.element = tk.Label(root, text=str(self._value.get()), pady=0)
+        self.element.pack()
+
+        # column.set(column.get() + 1)
+        if self.tooltip is not None:
+            self.tooltipObj = Tooltip(self.element, self.tooltip)
+
+
+    def update(self):
+        try:
+            self.element['text'] = self._value.get()
+            self.value = self._value.get()
+        except AttributeError:
+            pass
+    
+    def __invert__(self):
+        try:
+            self.value = self._value.get()
+        except AttributeError:
+            pass
+        return self.value
+
+    def get(self):
+        try:
+            self.value = self._value.get()
+        except AttributeError:
+            pass
+        return self.value
+
+    def truth(self):
+        try:
+            self.value = self._value.get()
+        except AttributeError:
+            pass
+        return self.value
+    
+    def __lt__(self, option):
+        self.update()
+        try:
+            return self.value < option.value
+        except AttributeError:
+            return self.value < option
+
+    def __gt__(self, option):
+        self.update()
+        try:
+            return self.value > option.value
+        except AttributeError:
+            return self.value > option
+
+    def __str__(self):
+        return f'Track[{self.value}, {self._value}]'

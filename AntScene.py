@@ -1,5 +1,5 @@
 from warnings import warn
-
+from Cope import debug
 from Scene     import *
 from Point     import *
 from Ant       import *
@@ -10,53 +10,55 @@ from TkOptions import *
 from Methods   import *
 from random    import randint, choice
 from CreateOptionMenu import createOptionMenu
+from Generation import Generation
 
 class AntScene(Scene):
     food = []
-    minFoods =              Option(20,    'Minimum Foods Spawned',                                                               tooltip='\n(minFoods)')
-    maxFoods =              Option(100,   'Maximum Foods Spawned',                                                               tooltip='\n(maxFoods)')
-    genSize =               Option(100,   'How many ants per generation',                                                        tooltip='\n(genSize)')
-    framesPerGeneration =   Option(300,   'How long each generation lasts',                                                      tooltip='\n(framesPerGeneration)')
-    autoBreed =             Option(True,  'Whether a new generation will be created after a time', widgetText='Auto-Breed',      tooltip='\n(autoBreed)')
-    homeColor =             Option([32, 60, 105], 'The home base color', _type='Color',                                          tooltip='\n(homeColor')
+    minFoods =   Option(20,    'Minimum Foods Spawned',                tooltip='(minFoods)')
+    maxFoods =   Option(100,   'Maximum Foods Spawned',                tooltip='(maxFoods)')
+    autoBreed =  Option(True,  widgetText='Auto-Breed',                tooltip='Whether a new generation will be created after a time\n(autoBreed)')
+    foodColor =  Option([255, 100, 100],  'Food Color', _type='Color', tooltip='(foodColor')
+    skipBadGen = Option(True,  widgetText='Skip bad generations',      tooltip='If the last generation was worse than the one before it, generate a new generation based on the one before it instead of just the last generation.\n(skipBadGen)')
 
     def init(self, **params):
-        self.ants = []
+        # self.ants = []
         self.foodCollected = 0
-        self.generation = 0
+        # self.generation = 0
         self.speedx = Option(1, 'How fast the simulation runs', min=1)
-        self.mutationChance = 100
+        # self.mutationChance = 100
         self.currentFrame = 0
         # null, because there is no return type for __init__
         self.null = Option(self.__init__, widgetText='Reset the Simulation', params=(self.mainSurface,), tooltip='Restart the simulation\n(null)')
-
         self.food = []
+
+        #* Generate food
         for _ in range(randint(~self.minFoods, ~self.maxFoods)):
             self.food.append(Food(size=self.getSize()))
 
         Ant.center = self.center
+        Food.color = ~self.foodColor
 
-        # Spawn the first generateion of ants
-        self.ants = generateGeneration(None, self.genSize, GenGen.none)
+        #* Spawn the first generateion of ants
+        self.generations = [Generation(None)]
 
 
     def run(self, deltaTime):
-        # print(len(self.ants))
         for _ in range(~self.speedx):
+
             if ~self.autoBreed:
                 self.currentFrame += 1
-                if self.currentFrame >= ~self.framesPerGeneration:
+                if self.currentFrame >= ~Generation.framesPerGeneration:
                     self.newGen()
                     break
 
-            for i in self.ants:
+            for i in self.generations[-1].ants:
                 i.run()
                 i.draw(self.mainSurface)
 
             for i in self.food:
                 i.draw(self.mainSurface)
 
-            pygame.gfxdraw.pixel(self.mainSurface, *self.center.datai(), self.homeColor.value)
+            pygame.gfxdraw.pixel(self.mainSurface, *self.center.datai(), Ant.homeColor.value)
 
             self.checkAnts()
 
@@ -64,23 +66,26 @@ class AntScene(Scene):
 
 
     def checkAnts(self):
-        # Check if we're touching food
-        for f in self.food:
-            for a in self.ants:
+        #* Check if we're touching food
+        for a in self.generations[-1].ants:
+            for f in self.food:
                 if isAdj(f.pos, a.pos):
                     a.food = 1
+                    a.color = ~Ant.carryingAntColor
+                    # print(f'{a} is adjacent to food at {f.pos}')
 
-        for a in self.ants:
-            if isAdj(Pointi(0, 0), a.pos):
-                self.foodCollected += 1 # a.food
-                a.foodCollected    += 1 # a.food
+            if a.food and isAdj(self.center, a.pos):
+                self.foodCollected += 1
+                a.foodCollected    += 1
                 a.food = 0
+                a.color = ~Ant.goodAntColor
+                # print(f'{a} is adjacent to the center at {self.center}')
 
 
     def newGen(self):
-        self.generation += 1
         self.currentFrame = 0
-        self.ants = generateGeneration(self.ants, self.genSize, generation=self.generation)
+        gen = Generation(self.generations if ~self.skipBadGen else self.generations[-1])
+        self.generations.append(gen)
 
 
     def keyDown(self, event):
@@ -96,14 +101,9 @@ class AntScene(Scene):
             self.newGen()
 
         if key == 'o':
-            # antMembers = getOptions(Ant)
-            # myMembers  = [getattr(self, attr) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__") and type(getattr(self, attr)) == Option]
-            # # antMembers += [minCutoffBreedingLen, minBreedingMultiCuts, maxBreedingMultiCuts]
-
-            # globalMembers = getOptions()
-            # OptionsMenu(tk.Tk(className='Options'), ['Ant'] + antMembers, ['Global'] + myMembers).mainloop()
-            # time.sleep(.15) # Escape debouncing
-            createOptionMenu(self, AntScene='Global', Global='Breeding & Mutating')
+            createOptionMenu(self, Ant(), self.generations[-1], AntScene='Global', getGlobal=False)
+            # This spot is as good as any to update this
+            Food.color = ~self.foodColor
 
         if key == 'up':
             self.speedx.value += 1

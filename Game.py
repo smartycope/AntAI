@@ -7,7 +7,6 @@ START_FULLSCREEN = False
 from os.path import dirname, join; DIR = join(dirname(__file__), '..')
 
 
-
 class Game:
     def __init__(self, size=[None, None], title='Hello World!', args=None):
         self.args = args
@@ -80,7 +79,7 @@ class Game:
         if pygame.__version__ >= '2.0.0':
             pygame.mouse.set_system_cursor(pygame.SYSTEM_CURSOR_ARROW)
             pygame.display.set_allow_screensaver(True)
-            self.windowedWindowFlags = self.windowedWindowFlags | pygame.SCALED
+            # self.windowedWindowFlags = self.windowedWindowFlags | pygame.SCALED
 
         #* Set the icon
         # with open(DIR + 'data/' + self.settings['iconFile'], 'r') as icon:
@@ -91,6 +90,8 @@ class Game:
             self.windowedSize[0] = round(self.screenSize[0] / 1.5)
         if size[1] is None:
             self.windowedSize[1] = round(self.screenSize[1] / 1.5)
+
+        self.windowedSize = (700, 500)
 
         if START_FULLSCREEN:
             self.mainSurface = pygame.display.set_mode(self.screenSize, self.fullscreenWindowFlags)

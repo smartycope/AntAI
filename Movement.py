@@ -1,5 +1,7 @@
 from random import randint
+from Cope import reprise, debug
 
+@reprise
 class Movement:
     MAX_MOVEMENT = 1
     def __init__(self, x=None, y=None):
@@ -18,3 +20,8 @@ class Movement:
     
     def __str__(self):
         return f'Movement[{self.x}, {self.y}]'
+
+    def __invert__(self):
+        self.x = ~self.x + 1
+        self.y = ~self.y + 1
+        return self

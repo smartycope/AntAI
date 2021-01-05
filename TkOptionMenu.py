@@ -4,6 +4,8 @@ from tkinter import ttk
 from enum import Enum
 from ScrolledFrame import ScrolledFrame
 import re, time
+# from Point import debug
+from _tkinter import TclError
 
 # Find the nice piano song at the end of Soul (the movie)
 #   learn to play it on guitar?
@@ -103,11 +105,10 @@ class OptionsMenu(ScrolledFrame):
     def exit(self, notSure):
         self.win.destroy()
 
-
-
-
-
 """
+
+
+
 class OptionsMenu(ScrolledFrame):
     def __init__(self, win, *options):
         super().__init__(win)
@@ -161,6 +162,10 @@ class OptionsMenu(ScrolledFrame):
         self.win.bind('<Return>', self.save)
         self.win.bind('<Button-4>', scrollUp)
         self.win.bind('<Button-5>', scrollDown)
+        self.win.bind('<Tab>', self.switchTabForward)
+        self.win.bind('<Shift-KeyPress-Tab>', self.switchTabBackward)
+        self.win.bind('<Shift-ISO_Left_Tab>', self.switchTabBackward)
+        self.win.bind('<Key>', self.keyHandler)
         # self.win.bind('<Configure>', self.configWin)
         # self.win.bind('<Configure>', self.reconfigure)
         def tmp(event):
@@ -176,6 +181,26 @@ class OptionsMenu(ScrolledFrame):
         tk.Button(self, text="Cancel", command=self.win.destroy).pack(side='bottom')
         tk.Button(self, text='Save', command=self.save).pack(side='bottom')
         tk.Button(self, text='Restore to Defaults', command=self.restore).pack(side='bottom')
+
+    def keyHandler(self, event):
+        # debug(event, color=5)
+        pass
+
+    def switchTabForward(self, event):
+        try:
+            self.notebook.select(self.notebook.index(self.notebook.select()) + 1)
+        except TclError:
+            self.notebook.select(0)
+
+    def switchTabBackward(self, event):
+        tmp=self.notebook.index(self.notebook.select())
+
+        # debug(tmp)
+
+        if tmp == 0:
+            self.notebook.select(len(self.tabs) - 1)
+        else:
+            self.notebook.select(tmp - 1)
 
     def restore(self):
         for k in self.options:

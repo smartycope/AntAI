@@ -34,7 +34,7 @@ class ScrolledFrame(Frame):
         # track changes to the canvas and frame width and sync them,
         # also updating the scrollbar
         def _configure_interior(event):
-            print('configuring interior')
+            # print('configuring interior')
             # update the scrollbars to match the size of the inner frame
             size = (scrolledFrame.winfo_reqwidth(), scrolledFrame.winfo_reqheight())
             self.canvas.config(scrollregion="0 0 %s %s" % size)
@@ -44,7 +44,7 @@ class ScrolledFrame(Frame):
         scrolledFrame.bind('<Configure>', _configure_interior)
 
         def _configure_canvas(event):
-            print('configuring canvas')
+            # print('configuring canvas')
             if scrolledFrame.winfo_reqwidth() != self.canvas.winfo_width():
                 # update the inner frame's width to fill the canvas
                 self.canvas.itemconfigure(interior_id, width=self.canvas.winfo_width())

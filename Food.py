@@ -1,6 +1,8 @@
 from Point import *
 import pygame.gfxdraw
+from Cope import reprise, debug
 
+@reprise
 class Food:
     minFood = 50
     maxFood = 1000
