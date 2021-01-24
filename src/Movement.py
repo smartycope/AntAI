@@ -1,8 +1,9 @@
 from random import randint
-from Cope import reprise, debug
+from Cope import reprise
+from Nucleotide import Nucleotide
 
 @reprise
-class Movement:
+class Movement(Nucleotide):
     MAX_MOVEMENT = 1
     def __init__(self, x=None, y=None):
         if x is None:
@@ -17,9 +18,9 @@ class Movement:
 
     def data(self):
         return [self.x, self.y]
-    
+
     def __str__(self):
-        return f'Movement[{self.x}, {self.y}]'
+        return f'Mov[{self.x}, {self.y}]'
 
     def __invert__(self):
         self.x = ~self.x + 1

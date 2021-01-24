@@ -1,21 +1,9 @@
 from enum import Enum, auto
-from Ant import Ant
-from TkOptions import Option
-from random import randint, choice
-from copy import deepcopy
-from warnings import warn
-from Point import Pointi
-from Movement import Movement
-# from AntScene import AntScene
 
-# TODO Breed.MultiCutoff does't do exactly what it's supposed to, but it's close enough for now.
-# TODO: Add a multiCutoff to Mutations
 # TODO: Add a multiInvert to Mutations
 # TODO: Add a weightedInduvidual to GenGen
-# mutationsChunkMinLen has become more of a general over all minimum length for any generation
 # Add generation saving
-# some mutation or breeding method (induvidual or family line?) progressively increases the length of dna
-# Add more generation info 
+# Add more generation info
 # add verbose generation info to options, i.e. food collected that generation, food returned that generation, etc.
 # add that info to the menu as well. total food returned, total food returned this generation, stats like that
 # add logging to the menu /|\
@@ -23,13 +11,14 @@ from Movement import Movement
 # add an option to incrementally increase the frames per generation with each generation
 # maybe add a full auto mode that does /|\ as well as changes the current methods based on different factors (length of time, how well the generations are working, etc.)
 # add a Romance method that takes all the ants that have food and breed them, or all the ants that have returned food and breed them, etc.
-# Somehow incentivize shorter dna lengths 
-# TODO: breeding.induvidual doesn't work
 # make a mutation method or a breeding method or something else that an ant will repeat it's sequence backwards
 #   when it finds food, like a real ant would, but with mutations. But add an option to turn it off.
-# Edit my debug function to automatically shorten lists, tuples and sets, but display the length, first, and last items
-# Add timing for the functions
-# Add a debugging timing function
+# add a "don't load from save/don't save" parameter to Option
+# Make it so if you pass None to OptionMenu, it doesn't create a notebook at all.
+# In createOptionsMenu or in OptionsMenu add functionality so it won't create an empty tab
+# Check what the list is holding (recursively) and add it to the types displayed in my debug function
+# add a feature that makes the ants come out one at a time (on a chance) and have them randomly follow a trail like real ants would
+# Multithread Generation
 
 
 #* Enums
@@ -39,6 +28,8 @@ class Mutations(Enum):
     chunk      = auto() # Only change a randomized chunk of the dna, keep the rest
     induvidual = auto() # Randomly change random indecies with random values (random chance or random amount)
     invert     = auto() # Same as chunk, but instead of creating new data there, invert said data
+    none       = auto() # Don't mutate
+    multiChunk = auto() # Change a bunch of randomized chunks of dna, keep the rest
 
 #* How ants are bred
 class Breeding(Enum):
@@ -52,7 +43,8 @@ class Romance(Enum):
     winnerSecond      = auto() # Breed the best creature and the second best creature
     winnerProb        = auto() # Breed 2 random creatures, weighted by how good they are
     groupWinnerSecond = auto() # Take a random selection of creatures, and breed the best 2 of that group
-    inbred            = auto() # Breed the top 2^n creatures with their next best creature, and do that over and over until there's one left
+    royalLine         = auto() # Breed the top 2^n creatures with their next best creature, and do that over and over until there's one left
+    inbred            = auto() # Breed the 2^n random creatures, and do that over and over until there's one left
 
 #* How each generation is generated
 class GenGen(Enum):
@@ -98,22 +90,3 @@ How each generation is generated\n
  mutationOnly: Instead of breeding, each generation is comprised of mutations of the selected couple (either mother or father, randomly chosen)
  \n(genGenMethod)
 '''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

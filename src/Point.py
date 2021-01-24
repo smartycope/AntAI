@@ -1,6 +1,5 @@
 from Cope import reprise
 
-@reprise
 class Pointi:
     def __init__(self, x = None, y = None):
         if (type(x) == Pointi or type(x) == Pointf) and y is None:
@@ -14,7 +13,7 @@ class Pointi:
                 self.x = None
             else:
                 self.x = int(x)
-                
+
             if y is None:
                 self.y = None
             else:
@@ -25,6 +24,8 @@ class Pointi:
         except:
             return False
     def __str__(self):
+        return f'({self.x}, {self.y})'
+    def __repr__(self):
         return f'({self.x}, {self.y})'
     def __getitem__(self, key):
         if key == 0:
@@ -179,7 +180,7 @@ class Pointi:
     def dataf(self):
         return [float(self.x), float(self.y)]
 
-@reprise
+
 class Pointf:
     def __init__(self, x = None, y = None):
         if (type(x) == Pointf or type(x) == Pointi) and y is None:
@@ -193,7 +194,7 @@ class Pointf:
                 self.x = None
             else:
                 self.x = float(x)
-                
+
             if y is None:
                 self.y = None
             else:
@@ -204,6 +205,8 @@ class Pointf:
         except:
             return False
     def __str__(self):
+        return f'({round(self.x, 5)}, {round(self.y, 5)})'
+    def __repr__(self):
         return f'({round(self.x, 5)}, {round(self.y, 5)})'
     def __getitem__(self, key):
         if key == 0:
@@ -357,7 +360,7 @@ class Pointf:
         return [int(self.x), int(self.y)]
     def dataf(self):
         return [float(self.x), float(self.y)]
-    
+
 
 from random import randint
 import math
@@ -376,3 +379,14 @@ def isAdj(p1, p2):
 
 def dist(p1, p2):
     return math.hypot(p2.x - p1.x, p2.y - p1.y)
+
+
+
+class Foo(object):
+    def __new__(cls, param=None):
+        print('new called')
+        print('param =', param)
+        return object.__new__(cls)
+    def __init__(self, param=None):
+        print('init called')
+        print('param =', param)

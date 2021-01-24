@@ -1,4 +1,6 @@
-import tkinter as tk
+from tkinter.ttk import Label
+from tkinter  import Toplevel
+# import tkinter.ttk as ttk
 
 class Tooltip(object):
     """
@@ -6,7 +8,7 @@ class Tooltip(object):
     """
     def __init__(self, widget, text=''):
         self.waittime = 500     # miliseconds
-        self.wraplength = 180   # pixels
+        # self.wraplength = 180   # pixels
         self.widget = widget
         self.text = text
         self.widget.bind("<Enter>", self.enter)
@@ -41,12 +43,13 @@ class Tooltip(object):
         # creates a toplevel window
         # This line is a hack, because I keep getting an error I can't prevent.
         self.widget._root().title = lambda: ''
-        self.tw = tk.Toplevel(self.widget)
-        
+        self.tw = Toplevel(self.widget)
+
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
-        label = tk.Label(self.tw, text=self.text, justify='left', background="#ffffff", relief='solid', borderwidth=1, wraplength = self.wraplength, fg="#000000")
+        # label = tkLabel(self.tw, text=self.text, justify='left', background="#ffffff", relief='solid', borderwidth=1, wraplength = self.wraplength, fg="#000000")
+        label = Label(self.tw, text=self.text, style='tooltip.TLabel')
         # label.grid(row=0, column=0)
         label.pack(ipadx=1)
 

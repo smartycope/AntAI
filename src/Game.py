@@ -1,6 +1,8 @@
 from GlobalFuncs import *
 from AntScene    import AntScene
-from OptionsMenu import OptionsMenu
+from CreatureScene import CreatureScene
+# from OptionsMenu import OptionsMenu
+# from AI import *
 
 FPS = 30
 START_FULLSCREEN = False
@@ -15,8 +17,9 @@ class Game:
         self.initPygame(size, title)
 
         self.scenes = {
+            # 'CreatureScene': CreatureScene,
             'AntScene': AntScene,
-            'OptionsMenu': OptionsMenu,
+            # 'OptionsMenu': OptionsMenu,
         }
 
         startScene = 'AntScene'
@@ -32,7 +35,7 @@ class Game:
             for event in pygame.event.get():
                 # if event.type != pygame.MOUSEMOTION: print(event)
                 self.currentScene.handleEvent(event)
-                
+
 
             # self.currentScene = self.scenes[self.currentScene.run(deltaTime)]
             sceneCommand = self.currentScene.run(deltaTime)
@@ -97,7 +100,7 @@ class Game:
             self.mainSurface = pygame.display.set_mode(self.screenSize, self.fullscreenWindowFlags)
         else:
             self.mainSurface = pygame.display.set_mode(self.windowedSize, self.windowedWindowFlags)
-        
+
         #* Get info about the graphics
         vidInfo = pygame.display.Info()
         if self.args.verbose:
