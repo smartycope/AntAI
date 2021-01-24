@@ -2,6 +2,17 @@ from random import randint
 import math
 from time import process_time
 
+dontDebug = False
+try:
+    from varname import nameof, VarnameRetrievingError
+    from inspect import stack
+except ImportError:
+    dontDebug = True
+
+
+from os.path import basename
+from copy    import deepcopy
+
 # Override the debug parameters and display the file/function for each debug call
 #   (useful for finding debug calls you left laying around and forgot about)
 debugCount = 0
@@ -39,113 +50,109 @@ def debug(var=None, *more_vars, prefix: str='', name=None, merge: bool=False, re
         debug(var, var1, var2, name=('variable', 'variable2', 'variable3')) ->
             prints each var on their own line with the appropriate name
     """
-    #* Make sure to always reset the color back to normal, in case we have an error inside this function
-    try:
-        from varname import nameof, VarnameRetrievingError
-        from inspect import stack
-        from os.path import basename
-        from copy    import deepcopy
+    if not dontDebug:
+        #* Make sure to always reset the color back to normal, in case we have an error inside this function
+        try:
+            global debugCount, DISPLAY_FUNC, DISPLAY_FILE
+            debugCount += 1
 
-        global debugCount, DISPLAY_FUNC, DISPLAY_FILE
-        debugCount += 1
-
-        #* Get the function, file, and line number of the call
-        s = stack()[(0 if _isDebuggedCall else 1) + calls]
-        stackData = str(s.lineno)
+            #* Get the function, file, and line number of the call
+            s = stack()[(0 if _isDebuggedCall else 1) + calls]
+            stackData = str(s.lineno)
 
 
-        if itemLimit < 0:
-            itemLimit = 1000000
+            if itemLimit < 0:
+                itemLimit = 1000000
 
-        #* Colors
-        # none, blue, green, orange, purple, cyan, alert red
-        colors = ['0', '34', '32', '33', '35', '36', '31']
+            #* Colors
+            # none, blue, green, orange, purple, cyan, alert red
+            colors = ['0', '34', '32', '33', '35', '36', '31']
 
-        if background:
-            color += 10
+            if background:
+                color += 10
 
-        c = f'\033[{colors[color]}m'
+            c = f'\033[{colors[color]}m'
 
-        if var is None:
-            if color == 1:
-                print(f'\033[{colors[-1]}m', end='')
+            if var is None:
+                if color == 1:
+                    print(f'\033[{colors[-1]}m', end='')
+                else:
+                    print(c, end='')
             else:
                 print(c, end='')
-        else:
-            print(c, end='')
 
-        #* Just print the "HERE! HERE!" message
-        if var is None:
-            print(f'{debugCount}[{stackData}]: HERE! HERE!')
-            print('\033[0m', end='')
-            return
-
-
-        #* Shorten var if var is a list or a tuple
-        # variables is a tuple of 2 item tuples that have the type as a string, and then the actual variable
-        variables = ()
-        for v in (var, *more_vars):
-            if type(v) in (tuple, list, set) and len(v) > itemLimit:
-                variables += ((type(v).__name__, str(v[0:round(itemLimit/2)])[:-1] + f', \033[0m...{c} ' + str(v[-round(itemLimit/2)-1:-1])[1:] + f'(len={len(v)})'),)
-            elif type(v) in (tuple, list, set):
-                variables += ((type(v).__name__, str(v) + f'(len={len(v)})'),)
-            else:
-                variables += ((type(v).__name__, v),)
-
-        if DISPLAY_FUNC or showFunc:
-            stackData = s.function + '()->' + stackData
-        if DISPLAY_FILE or showFile:
-            stackData = basename(s.filename) + '->' + stackData
-
-        #* Actually get the names
-        try:
-            if name is None:
-                try:
-                    var_names = nameof(*[i[1] for i in variables], caller=2+calls, full=True)
-                except VarnameRetrievingError:
-                    var_names = nameof(*[i[1] for i in variables], caller=2+calls)
-            else:
-                # This should work for tuples too
-                if type(name) is list:
-                    name = tuple(name)
-                var_names = name
-
-        #* If only a string literal is passed in, display it
-        except VarnameRetrievingError as err:
-            if type(var) is str:
-                print(f"{debugCount}[{stackData}]: {prefix} {var}")
+            #* Just print the "HERE! HERE!" message
+            if var is None:
+                print(f'{debugCount}[{stackData}]: HERE! HERE!')
                 print('\033[0m', end='')
                 return
+
+
+            #* Shorten var if var is a list or a tuple
+            # variables is a tuple of 2 item tuples that have the type as a string, and then the actual variable
+            variables = ()
+            for v in (var, *more_vars):
+                if type(v) in (tuple, list, set) and len(v) > itemLimit:
+                    variables += ((type(v).__name__, str(v[0:round(itemLimit/2)])[:-1] + f', \033[0m...{c} ' + str(v[-round(itemLimit/2)-1:-1])[1:] + f'(len={len(v)})'),)
+                elif type(v) in (tuple, list, set):
+                    variables += ((type(v).__name__, str(v) + f'(len={len(v)})'),)
+                else:
+                    variables += ((type(v).__name__, v),)
+
+            if DISPLAY_FUNC or showFunc:
+                stackData = s.function + '()->' + stackData
+            if DISPLAY_FILE or showFile:
+                stackData = basename(s.filename) + '->' + stackData
+
+            #* Actually get the names
+            try:
+                if name is None:
+                    try:
+                        var_names = nameof(*[i[1] for i in variables], caller=2+calls, full=True)
+                    except VarnameRetrievingError:
+                        var_names = nameof(*[i[1] for i in variables], caller=2+calls)
+                else:
+                    # This should work for tuples too
+                    if type(name) is list:
+                        name = tuple(name)
+                    var_names = name
+
+            #* If only a string literal is passed in, display it
+            except VarnameRetrievingError as err:
+                if type(var) is str:
+                    print(f"{debugCount}[{stackData}]: {prefix} {var}")
+                    print('\033[0m', end='')
+                    return
+                else:
+                    raise err
+
+            #* If it's not already a tuple, turn it into one
+            if not isinstance(var_names, tuple):
+                var_names = (var_names, )
+
+            name_and_values = [f"{var_name} = {variables[i][1]!r}" if repr
+                        else f"{var_name} = {variables[i][1]}"
+                        for i, var_name in enumerate(var_names)]
+
+            if merge:
+                print(f"{debugCount}[{stackData}]: {prefix}{', '.join(name_and_values)}")
+            else:
+                for cnt, name_and_value in enumerate(name_and_values):
+                    print(f"{debugCount}[{stackData}]: {prefix}{variables[cnt][0].title()} {name_and_value}")
+                    # debugCount += 1
+
+            print('\033[0m', end='')
+        #* Catch the error and try again with an additional call
+        except VarnameRetrievingError as err:
+            if not _noRecall:
+                debug(var, more_vars, prefix=prefix, name=name, repr=repr, merge=merge, calls=calls+2, color=color, background=background,
+                        itemLimit=itemLimit, showFunc=showFunc, showFile=showFile, _isDebuggedCall=False, _noRecall=True)
             else:
                 raise err
 
-        #* If it's not already a tuple, turn it into one
-        if not isinstance(var_names, tuple):
-            var_names = (var_names, )
 
-        name_and_values = [f"{var_name} = {variables[i][1]!r}" if repr
-                      else f"{var_name} = {variables[i][1]}"
-                       for i, var_name in enumerate(var_names)]
-
-        if merge:
-            print(f"{debugCount}[{stackData}]: {prefix}{', '.join(name_and_values)}")
-        else:
-            for cnt, name_and_value in enumerate(name_and_values):
-                print(f"{debugCount}[{stackData}]: {prefix}{variables[cnt][0].title()} {name_and_value}")
-                # debugCount += 1
-
-        print('\033[0m', end='')
-    #* Catch the error and try again with an additional call
-    except VarnameRetrievingError as err:
-        if not _noRecall:
-            debug(var, more_vars, prefix=prefix, name=name, repr=repr, merge=merge, calls=calls+2, color=color, background=background,
-                    itemLimit=itemLimit, showFunc=showFunc, showFile=showFile, _isDebuggedCall=False, _noRecall=True)
-        else:
-            raise err
-
-
-    finally:
-        print('\033[0m', end='')
+        finally:
+            print('\033[0m', end='')
 
 
 def debugged(var, prefix: str='', name=None, repr: bool=False, calls: int=0,
@@ -330,7 +337,7 @@ def darken(rgb, amount):
 import tkinter as tk
 import tkinter.ttk as ttk
 from contextlib import redirect_stdout
-import ttkthemes
+# import ttkthemes
 
 def stylenameElementOptions(stylename):
     '''Function to expose the options of every element associated to a widget

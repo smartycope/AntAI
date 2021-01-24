@@ -5,8 +5,13 @@ from ScrolledFrame import ScrolledFrame
 import re, time
 from _tkinter import TclError
 from Cope import debug, debugged, rgbToHex
-import ttkthemes
 from TkOptions import Option
+
+extraThemes = True
+try:
+    import ttkthemes
+except ImportError:
+    extraThemes = False
 
 
 SCROLL_SPEED = 1
@@ -15,7 +20,10 @@ SCREEN_HEIGHT_DIVISOR = 1.1
 
 
 def generateStyle():
-    s = ttkthemes.ThemedStyle()
+    if extraThemes:
+        s = ttkthemes.ThemedStyle()
+    else:
+        s = Style()
     # s.theme_use('default')
 
     # bg = rgbToHex((49, 54, 59))
