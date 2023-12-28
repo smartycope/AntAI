@@ -1,229 +1,100 @@
-from Point import Pointi, dist
+# from Point import Pointi, dist
 from Movement import Movement
 from random import randint
 import pygame.gfxdraw
-from TkOptions import Option
-from Cope import reprise, debug, closeEnough
+import pygame
+# from TkOptions import Option
+# from Cope import reprise, debug, closeEnough
 from Creature import Creature
+from scipy.spatial.distance import cdist
 from copy import copy, deepcopy
+import numpy as np
+import math
 
 
-@reprise
+def dist(p1, p2):
+    return math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+
+
 class Ant(Creature):
-    center = None
-    homeColor =        Option([32, 60, 105],   'The home base color', 'Colors', type_='Color',                                                                                           var='homeColor')
-    carryingAntColor = Option([0, 0, 255],     'Carrying ant color',  'Colors', type_='Color', tooltip='If an ant is carrying food, they turn this color',                               var='carryingAntColor')
-    antColor =         Option([255, 255, 255], 'Defualt ant color',   'Colors', type_='Color', tooltip='The default ant color',                                                          var='antColor')
-    goodAntColor =     Option([255, 255, 0],   'Good ant color',      'Colors', type_='Color', tooltip='If an ant has returned food to home, they turn this color.',                     var='goodAntColor')
-    parentAntColor =   Option([100, 255, 100], 'Parent ant color',    'Colors', type_='Color', tooltip='If an ant is a parent of the current generation, they start out as this color.', var='parentAntColor')
-    champiantColor =   Option([50, 100, 50],   'Chamipant Color',     'Colors', type_='Color', var='champiantColor')
+    # These are set externally
+    home = None
+    start = None
+    limit_after_collected = False
+    verbose = False
 
-    def init(self):
-        self.pos = Pointi(self.center)
+    def __init__(self, dna=[]):
+        self.pos = self.start.copy()
         self.food = 0
-        self.foodCollected = 0
-        self.color = ~self.antColor
-        self.movementIndex = 0
-        #* Indecies of the places that we got food, or returned food
-        #   (to incentivize more direct paths)
-        self.goodPlaces = [0,]
+        self.food_collected = 0
+        self.food_gathered = 0
+        self.movement_index = 0
+        self.good_indicies = []
+        self._limit_index = 0
+        super().__init__(dna.copy())
 
-    def initCopy(self, instance):
-        self.init()
+    def __getitem__(self, key):
+        return self.pos[key]
 
-    def initAsParent(self):
-        self.init()
-        self.color = ~self.parentAntColor
-
-    def initCopyAsParent(self, instance):
-        self.initAsParent()
-
+    def __setitem__(self, key, value):
+        self.pos[key] = value
 
     def wander(self):
-        if self.movementIndex >= len(self.dna) - 1:
+        if self.movement_index >= len(self.dna) - 1:
             self.dna.append(Movement())
 
-        self.pos += self.dna[self.movementIndex].data()
-        self.movementIndex += 1
+        self.pos += self.dna[self.movement_index]
+        self.movement_index += 1
 
+    def reset(self, to=None):
+        # TODO should I reset the dna here?
+        self[0] = self.home[0] if to is None else to[0]
+        self[1] = self.home[1] if to is None else to[1]
+        self.food = 0
+        self.food_collected = 0
+        self.food_gathered = 0
+        self.movement_index = 0
 
-    def run(self):
-        self.wander()
-
-
-    def draw(self, surface):
-        pygame.gfxdraw.pixel(surface, *self.pos.datai(), self.color)
-
-
-    def getScore(self):
+    def reward(self):
         score = 0
-        score += self.foodCollected * 10000
+        score += self.food_collected * 100000
         score += self.food * 5000
 
-        #* If we have food, get as close to the center as we can.
-        #   If not, go as far away as we can (to explore)
+        # If we have food, get as close to the center as we can.
+        # If not, go as far away as we can (to explore)
+        assert self.home is not None
         if self.food:
-            score -= dist(self.pos, self.center) * 5
+            # score -= cdist(self, self.home, metric='cityblock') * 5
+            score -= dist(self, self.home)
         else:
-            score += dist(self.pos, self.center) * 5
+            # score += cdist(self, self.home, metric='cityblock') * 5
+            score += dist(self, self.home)
 
-        for i in range(len(self.goodPlaces) - 1):
-            score -= (self.goodPlaces[i+1] - self.goodPlaces[i]) * 3
+        # Incentivize quicker routes
+        for i in range(len(self.good_indicies)-1):
+            score -= (self.good_indicies[i+1] - self.good_indicies[i]) * 30
 
-        return round(score)
+        return score
 
+    def rememberIndex(self, home=False):
+        self.good_indicies.append(self.movement_index)
+        # This means we just brought food back to home
+        # if np.all(self.pos == self.home) and self.movement_index != 0:
+        if home:
+            self._limit_index = self.movement_index
 
-    def rememberIndex(self):
-        self.goodPlaces.append(self.movementIndex)
+    def limit(self):
+        if self._limit_index == 0:
+            return
 
+        if self.verbose:
+            print(f'limiting to {self._limit_index}')
 
-    def __gt__(self, ant):
-        # Go by amount of food returned.
-        # Otherwise go by amount of food on me.
-        # Otherwise, go by the score
-        if self.foodCollected > ant.foodCollected:
-            return True
-        elif self.foodCollected == ant.foodCollected:
-            if self.food > ant.food:
-                return True
-            elif self.food == ant.food:
-                return self.getScore() > ant.getScore()
-                # selfDist = dist(self.pos, self.center)
-                # antDist  = dist(ant.pos, self.center)
-                # if self.food > 0:
-                #     if closeEnough(selfDist, antDist, ~self.lengthOverDistWeight):
-                #         return len(self.dna) < len(ant.dna)
-                #     elif selfDist < antDist:
-                #         return True
-                # elif self.food == 0 and selfDist > antDist:
-                #     return True
-
-        # return False
-
-    def __lt__(self, ant):
-        if self.foodCollected < ant.foodCollected:
-            return True
-        elif self.foodCollected == ant.foodCollected:
-            if self.food < ant.food:
-                return True
-            elif self.food == ant.food:
-                return self.getScore() < ant.getScore()
-                # selfDist = dist(self.pos, self.center)
-                # antDist  = dist(ant.pos, self.center)
-                # if self.food > 0:
-                #     if closeEnough(selfDist, antDist, ~self.lengthOverDistWeight):
-                #         return len(self.dna) > len(ant.dna)
-                #     elif selfDist > antDist:
-                #         return True
-                # elif self.food == 0 and selfDist < antDist:
-                #     return True
-
-        # return False
+        self.dna = self.dna[:self._limit_index]
+        self.movement_index = self._limit_index
 
     def __str__(self):
-        return f'Ant[pos=({self.pos.x}, {self.pos.y}), food collected={self.foodCollected}, food={self.food}, score={self.getScore()}, len(dna)={len(self.dna)}]'
+        return str(self.pos)
 
-
-
-
-
-
-'''
-@reprise
-class Ant:
-    center = None
-    homeColor =            Option([32, 60, 105],   'The home base color', _type='Color', tooltip='(homeColor')
-    carryingAntColor =     Option([0, 0, 255],     'Carrying ant color',  _type='Color', tooltip='If an ant is carrying food, they turn this color\n(carryingAntColor)')
-    antColor =             Option([255, 255, 255], 'Defualt ant color',   _type='Color', tooltip='The default ant color\n(antColor)')
-    goodAntColor =         Option([255, 255, 0],   'Good ant color',      _type='Color', tooltip='If an ant has returned food to home, they turn this color.\n(goodAntColor)')
-    parentAntColor =       Option([100, 255, 100], 'Parent ant color',    _type='Color', tooltip='If an ant is a parent of the current generation, they start out as this color.\n(parentAntColor)')
-    lengthOverDistWeight = Option(10,              'Lenght weight',                      tooltip='How close the distances from the center of 2 ants have to be before you sort them by length of path instead of distance from center\n(lengthOverDistWeight)')
-
-
-    def __init__(self):
-        self.dna = []
-        self.pos = Pointi(self.center)
-        self.movementIndex = 0
-        self.food = 0
-        self.foodCollected = 0
-        self.color = ~self.antColor
-
-
-    def wander(self):
-        if self.movementIndex >= len(self.dna) - 1:
-            self.dna.append(Movement())
-        self.movementIndex += 1
-        # print(self.movementIndex)
-        # print(len(self.dna))
-        self.pos -= self.dna[self.movementIndex - 1].data()
-
-
-    def run(self):
-        self.wander()
-
-
-    def draw(self, surface):
-        pygame.gfxdraw.pixel(surface, *self.pos.datai(), self.color)
-
-
-    def strip(self):
-        """ Strips the ant so only it's dna is left """
-        self.pos = Pointi(self.center)
-        self.movementIndex = 0
-        self.food = 0
-        self.foodCollected = 0
-        self.color = ~self.antColor
-        return self
-
-
-    def setAsParent(self):
-        self.color = ~self.parentAntColor
-        return self
-
-
-    def __gt__(self, ant):
-        # Go by amount of food returned.
-        # Otherwise go by amount of food on me.
-        # Otherwise, if I have food, the closer one to center wins.
-        # Otherwise, if I don't have food, the furthest one from center wins.
-        if self.foodCollected > ant.foodCollected:
-            return True
-        elif self.foodCollected == ant.foodCollected:
-            if self.food > ant.food:
-                return True
-            elif self.food == ant.food:
-                selfDist = dist(self.pos, self.center)
-                antDist  = dist(ant.pos, self.center)
-                if self.food > 0:
-                    if closeEnough(selfDist, antDist, ~self.lengthOverDistWeight):
-                        return len(self.dna) < len(ant.dna)
-                    elif selfDist < antDist:
-                        return True
-                elif self.food == 0 and selfDist > antDist:
-                    return True
-
-        return False
-
-    def __lt__(self, ant):
-        if self.foodCollected < ant.foodCollected:
-            return True
-        elif self.foodCollected == ant.foodCollected:
-            if self.food < ant.food:
-                return True
-            elif self.food == ant.food:
-                selfDist = dist(self.pos, self.center)
-                antDist  = dist(ant.pos, self.center)
-                if self.food > 0:
-                    if closeEnough(selfDist, antDist, ~self.lengthOverDistWeight):
-                        return len(self.dna) > len(ant.dna)
-                    elif selfDist > antDist:
-                        return True
-                elif self.food == 0 and selfDist < antDist:
-                    return True
-
-        return False
-
-    def __str__(self):
-        return f'Ant[{self.pos.x}, {self.pos.y}: {self.foodCollected}, {self.food}: {len(self.dna)}]'
-
-'''
+    def __repr__(self):
+        return f'Ant(collected: {self.food_collected}, gathered: {self.food_gathered}, food: {self.food}, reward: {round(self.reward())})'

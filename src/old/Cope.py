@@ -291,10 +291,6 @@ class getTime:
 
 
 
-def isPowerOf2(x):
-    return (x != 0) and ((x & (x - 1)) == 0)
-
-
 
 def isBetween(val, start, end, beginInclusive=False, endInclusive=False):
     return (val >= start if beginInclusive else val > start) and \

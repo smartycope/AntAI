@@ -1,28 +1,30 @@
 from random import randint
-from Cope import reprise
 from Nucleotide import Nucleotide
+import numpy as np
 
-@reprise
-class Movement(Nucleotide):
-    MAX_MOVEMENT = 1
-    def __init__(self, x=None, y=None):
-        if x is None:
-            self.x = randint(-self.MAX_MOVEMENT, self.MAX_MOVEMENT)
-        else:
-            self.x = x
+class Movement(np.ndarray, Nucleotide):
+    max_movement = 1
+    # Because numpy handles subclassing differently than most things
+    def __new__(cls, x=None, y=None):
+        obj= np.asarray([
+                randint(-cls.max_movement, cls.max_movement) if x is None else x,
+                randint(-cls.max_movement, cls.max_movement) if y is None else y
+            ], dtype=np.int32).view(cls)
+        return obj
 
-        if y is None:
-            self.y = randint(-self.MAX_MOVEMENT, self.MAX_MOVEMENT)
-        else:
-            self.y = y
-
-    def data(self):
-        return [self.x, self.y]
-
-    def __str__(self):
-        return f'Mov[{self.x}, {self.y}]'
+    def __array_finalize__(self, obj):
+        if obj is None: return
 
     def __invert__(self):
-        self.x = ~self.x + 1
-        self.y = ~self.y + 1
-        return self
+        return super().__invert__() + self.max_movement
+
+    # def __str__(self):
+        # return str(self)
+
+
+if __name__ == '__main__':
+    # print(Movement())
+    # print(Movement(2, 3))
+    # print(~Movement(-1, 1))
+    print(np.array([Movement(1, 2) for _ in range(20)]).view(Movement)[4].test)
+    # print(Movement[:3])

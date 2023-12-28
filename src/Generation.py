@@ -1,417 +1,269 @@
 from copy import deepcopy
-from enum import Enum, auto
-from Methods import Romance, romanceTooltip, Mutations, mutationsTooltip, GenGen, GenGenTooltip, Breeding, breedingTooltip
 from random import choice, randint, sample
 from warnings import warn
-from Cope import reprise, debug, percent, isPowerOf2, timeFunc, getTime
-from TkOptions import Option
 from multiprocessing import Pool
 from math import ceil
+from Creature import Creature
+from Nucleotide import Nucleotide
+from Options import *
+# This isn't actually necissary
+from Ant import Ant
 
 
-getChampiant =                         Option(True, 'Display Champiant',                         'General', tooltip='Determines whether to display the best and of the current generation or not.',                 var='getChampiant')
+def percent(percentage):
+    ''' Usage:
+        if (percent(50)):
+            <has a 50% chance of running>
+    '''
+    return randint(1, 100) < percentage
 
-@reprise
+
 class Generation:
-    minDnaLen =                         Option(5,    'Minimum chunk width',                       'General', tooltip='The minimum amount of nucleotides any given chunk must have',                                  var='minDnaLen')
-    breedingCutoffMinLen =              Option(10,   'cutoff - Minimum cut width',               'Breeding', tooltip='The minimum amount of nucleotides each parent contributes to each of their child\'s dna cuts', var='breedingCutoffMinLen')
-    breedingMultiCutsMin =              Option(3,    'multiCut - Minimum cuts',                  'Breeding', tooltip='The minimum amount of cuts multicut cuts',                                                     var='breedingMultiCutsMin')
-    breedingMultiCutsMax =              Option(15,   'multiCut - Maximum cuts',                  'Breeding', tooltip='The maximum amount of cuts multicut cuts',                                                     var='breedingMultiCutsMax')
-    mutationsInduvidualChance =         Option(20,   'induvidual - Mutation chance',             'Mutating', tooltip='The percent chance for each movement to be mutated',                                           var='mutationsInduvidualChance')
-    mutationsMultiCutsMax =             Option(15,   'multiCut - Maximum cuts',                  'Mutating', tooltip='The maximum amount of cuts multicut cuts',                                                     var='mutationsMultiCutsMax')
-    mutationsMultiCutsMin =             Option(3,    'multiCut - Minimum cuts',                  'Mutating', tooltip='The minimum amount of cuts multicut cuts',                                                     var='mutationsMultiCutsMin')
-    romanceWinnerProbWeight =           Option(1,    'winnerProb - Probibility weight',         'Selection', tooltip='How much romance.winnerProb is weighted',                                                      var='romanceWinnerProbWeight')
-    romanceGroupWinnerSecondGroupSize = Option(20,   'groupWinnerSecond - Group size',          'Selection',                                                                                                         var='romanceGroupWinnerSecondGroupSize')
-    romanceInbredCouples =              Option(8,    'inbred - Number of couples',              'Selection', tooltip='How many couples inbreed together in romance.inbreed (must be a power of 2)',                  var='romanceInbredCouples')
-    romanceRoyalLineCouples =           Option(8,    'royalLine - Number of couples',           'Selection', tooltip='How many couples inbreed together in romance.royalLine (must be a power of 2)',                var='romanceRoyalLineCouples')
-    genGenInduvidualNumCouples =        Option(10,   'induvidual - Number of Couples',         'Generation', tooltip='The "n" in GenGen Induvidual',                                                                 var='genGenInduvidualNumCouples')
-    genGenIncludeParents =              Option(True, 'Include Parents',                        'Generation', tooltip='Whether we should add the parents of the previous generation to the new generation',           var='genGenIncludeParents')
-    mutateAtAll =                       Option(100,  'Mutation Chance',                        'Generation', tooltip='The percent chance that a particular ant is mutated at all.',                                  var='mutateAtAll')
-    genSize =                           Option(100,  'Creatures per generation',               'Generation',                                                                                                         var='genSize')
-    genScoreBy =                        Option(10,   'Sort Generations by their top N creatures', 'General', tooltip='Generations are sorted by the total scores of their top this many of creatures.',              var='genScoreBy')
+    processes = 4
+    creature_type = Creature
+    nucleotide_type = Nucleotide
+    # Generations are sorted by the total scores of their top this many of creatures
+    score_by_top_n = 20
+    # How many creatures are in each generation
+    size = 20
+    verbose = False
 
-    mutationMethod =                    Option(Mutations, 'Mutation method',   'Mutating',   currentItem=Mutations.chunk,      tooltip=mutationsTooltip)
-    breedingMethod =                    Option(Breeding,  'Breeding method',   'Breeding',   currentItem=Breeding.induvidual,  tooltip=breedingTooltip)
-    romanceMethod =                     Option(Romance,   'Selection Method',  'Selection',  currentItem=Romance.winnerSecond, tooltip=romanceTooltip)
-    genGenMethod =                      Option(GenGen,    'Generation Method', 'Generation', currentItem=GenGen.familyLine,    tooltip=GenGenTooltip)
+    def __init__(self, creatures=None, dna=[]):
+        # Imply neucleotide type, if it doesn't exist already
+        self._steps = 0
+        self.creatures = [self.creature_type(dna=dna) for _ in range(self.size)] if creatures is None else creatures
 
-    currentGeneration =                 Option('0', 'Generation ', type_='Label', var='currentGeneration')
-
-    def __init__(self, prevGen=None, nucleotideType=None, creatureType=None):
-        self.creatures = []
-
-        if creatureType is None:
-            assert(prevGen is not None)
-            if type(prevGen) in (list, set, tuple):
-                self.creatureType = prevGen[-1].creatureType
-            else:
-                self.creatureType = prevGen.creatureType
-        else:
-            self.creatureType = creatureType
-
-        if nucleotideType is None:
-            assert(prevGen is not None)
-            if type(prevGen) in (list, set, tuple):
-                self.nucleotideType = prevGen[-1].nucleotideType
-            else:
-                self.nucleotideType = prevGen.nucleotideType
-        else:
-            self.nucleotideType = nucleotideType
-
-        if prevGen is None:
-            debug("Creating the first generation", color=6)
-            self.num = 0
-            self.generate(None, method=GenGen.none)
-
-        elif type(prevGen) is Generation:
-            debug(prevGen.num)
-            # debug()
-            self.num = prevGen.num + 1
-            self.generate(prevGen)
-
-        elif type(prevGen) in (tuple, list, set):
-            self.num = len(prevGen) #max(prevGen, key=lambda g: g.num).num + 1
-            # _prevGen = sorted(prevGen)
-            # debug(_prevGen, color=6)
-            if getChampiant.get():
-                print(f'The best generation so far is Generation {max(prevGen)}')
-
-            # for cnt, i in enumerate(prevGen):
-            # bestGen = max(prevGen)
-
-            self.generate(max(prevGen))
-
-        else:
-            raise TypeError('PrevGen is not of type Generation, tuple, set, or list')
-
-        # debug(self.mutationMethod.get(), self.breedingMethod.get(), self.romanceMethod.get(), self.genGenMethod.get(), name=('Method',) * 4, color=2)
-        # debug(self.creatures, itemLimit=4)
-        self.currentGeneration.set(self.num)
-
-    # @timeFunc
-    def selectCreatures(self, creatures=None, method=None):
+    def select(self, method, creatures) -> tuple:
         """ Select a couple for breeding out of self.creatures
             returns: tuple of 2 creatures
         """
-        if method is None:
-            method = self.romanceMethod.get()
+        match method.method:
+            case 'Induvidual':
+                rtn = sample(creatures, 2)
 
-        if creatures is None:
-            creatures = self.creatures
+            case 'WinnerSecond':
+                rtn = sorted(creatures)[-3: -1]
 
-        if   method == Romance.induvidual:
-            return sample(creatures, 2)
+            case 'WinnerProb':
+                chanceList = ()
+                creatures.sort()
 
-        elif method == Romance.winnerSecond:
-            return sorted(creatures)[-3: -1]
+                for cnt, c in enumerate(creatures):
+                    chanceList += (c,) * (cnt * method.weight)
 
-        elif method == Romance.winnerProb:
-            chanceList = ()
-            creatures.sort()
+                rtn = sample(chanceList, 2)
 
-            for cnt, c in enumerate(creatures):
-                chanceList += (c,) * (cnt * self.romanceWinnerProbWeight.get())
+            case 'GroupWinnerSecond':
+                rtn = sorted(sample(creatures, method.group_size))[-3: -1]
 
-            return sample(chanceList, 2)
+            case 'RoyalLine':
+                assert(isPowerOf2(method.num_couples))
 
-        elif method == Romance.groupWinnerSecond:
-            return sorted(sample(creatures, self.romanceGroupWinnerSecondGroupSize.get()))[-3: -1]
+                couples = sorted(creatures)[-method.num_couples-1: -1] \
+                        if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
+                        else creatures
 
-        elif method == Romance.royalLine:
-            assert(isPowerOf2(self.romanceRoyalLineCouples.get()))
+                children = [self.breed(method.breeding_method, couples[i], couples[i+1])
+                            for i in range(0, len(couples), 2)]
 
-            couples = sorted(creatures)[-self.romanceRoyalLineCouples.get()-1: -1] \
-                      if len(creatures) >= self.genSize.get() or not isPowerOf2(len(creatures)) \
-                      else creatures
+                rtn = children if len(children) == 2 else self.select(Selection.RoyalLine, children)
 
-            children = [self.breed(couples[i], couples[i+1])
-                        for i in range(0, len(couples), 2)]
+            case 'Inbred':
+                assert(isPowerOf2(method.num_couples))
 
-            return children \
-                   if len(children) == 2 \
-                   else self.selectCreatures(children, Romance.royalLine)
+                couples = sample(creatures, method.num_couples) \
+                        if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
+                        else creatures
 
-        elif method == Romance.inbred:
-            assert(isPowerOf2(self.romanceInbredCouples.get()))
+                children = [self.breed(couples[i], couples[i+1]) for i in range(0, len(couples), 2)]
 
-            couples = sample(creatures, self.romanceInbredCouples.get()) \
-                      if len(creatures) >= self.genSize.get() or not isPowerOf2(len(creatures)) \
-                      else creatures
+                rtn = children if len(children) == 2 else self.select(Selection.Inbred, children)
 
-            children = [self.breed(couples[i], couples[i+1]) for i in range(0, len(couples), 2)]
+        if self.verbose:
+            print('Selecting ants:', f'Mother: {repr(rtn[0])}', f'Father: {repr(rtn[1])}', sep='\n')
 
-            return children \
-                   if len(children) == 2 \
-                   else self.selectCreatures(children, Romance.inbred)
+        if Ant.limit_after_collected:
+            rtn[0].limit()
+            rtn[1].limit()
+        return rtn
 
-        else:
-            UserWarning('Generation.romanceMethod is incorrect')
+    def mutate(self, method, creature):
+        if percent(method.total_mutation_chance*100):
+            # If it wasn't specified (it was supposed to be), then try to imply it
+            if self.nucleotide_type is None:
+                self.nucleotide_type = type(self.creatures[0].dna[0]) if len(self.creatures) and len(self.creatures[0].dna) else type(creature.dna[0])
+            mutated = self.creature_type(creature.dna.copy())
+            match method.method:
+                case 'Cutoff':
+                    cutoff = randint(0, len(creature.dna) - 1)
+                    mutated.dna = creature.dna[cutoff:] if percent(50) else creature.dna[:cutoff]
 
-    # @timeFunc
-    def mutate(self, creature, method=None):
-        if method is None:
-            method = self.mutationMethod.get()
+                case 'Chunk':
+                    start, end = sorted(sample(range(len(creature.dna)), 2))
+                    mutated.dna = creature.dna[:start] + [self.nucleotide_type() for _ in range(end-start)] + creature.dna[end:]
 
-        if percent(self.mutateAtAll.get()):
-            mutated = self.creatureType(creature)
+                case 'Induvidual':
+                    for cnt in range(len(mutated.dna)):
+                        if percent(method.mutation_chance*100):
+                            mutated.dna[cnt] = self.nucleotide_type()
 
-            if   method == Mutations.cutoff:
-                cutoff = randint(0, len(creature.dna) - 1)
-                mutated.dna = creature.dna[cutoff:] if percent(50) else creature.dna[:cutoff]
+                case 'Invert':
+                    start, end = sorted(sample(range(len(creature.dna)), 2))
 
-            elif method == Mutations.chunk:
-                start, end = sorted(sample(range(len(creature.dna)), 2))
-                mutated.dna = creature.dna[:start] + [self.nucleotideType() for _ in range(end-start)] + creature.dna[end:]
+                    for i in range(start, end):
+                        mutated.dna[i] = ~mutated.dna[i]
 
-            elif method == Mutations.induvidual:
-                for cnt in range(len(mutated.dna)):
-                    if percent(~self.mutationsInduvidualChance):
-                        mutated.dna[cnt] = self.nucleotideType()
+                case 'Dont':
+                    pass
 
-            elif method == Mutations.invert:
-                try:
-                    getattr(self.nucleotideType, '__invert__')
-                except NotImplementedError:
-                    warn('NucleotideType doesn\'t have an invert operator overload, not mutating...')
-                    return creature
-                except AttributeError:
-                    raise UserWarning('The Nucleotide class you\'re using doesn\'t inhearit from Nucleotide!')
+                case 'MultiChunk':
+                    # Get a random number of indecies between the min and max cut amounts from the length of creatures's dna
+                    indecies = sorted(sample(range(len(creature.dna) - ~method.min_cutoff_len),
+                                                    randint(method.min_cuts * 2, method.max_cuts * 2)))
 
-                start, end = sorted(sample(range(len(creature.dna)), 2))
-
-                for i in range(start, end):
-                    mutated.dna[i] = ~mutated.dna[i]
-
-            elif method == Mutations.none:
-                pass
-
-            elif method == Mutations.multiChunk:
-                # Get a random number of indecies between the min and max cut amounts from the length of creatures's dna
-                indecies = sorted(sample(range(len(creature.dna) - ~self.breedingCutoffMinLen),
-                                                randint(self.mutationsMultiCutsMin.get() * 2, self.mutationsMultiCutsMax.get() * 2)))
-
-
-                for i in range(len(indecies)):
-                    if i % 2:
-                        mutated.dna[indecies[i-1]:indecies[i]] = [self.nucleotideType() for _ in range(indecies[i]-indecies[i-1])]
-
-            else:
-                UserWarning('Generation.mutationMethod is incorrect')
+                    for i in range(len(indecies)):
+                        if i % 2:
+                            mutated.dna[indecies[i-1]:indecies[i]] = [self.nucleotide_type() for _ in range(indecies[i]-indecies[i-1])]
 
             return mutated
-
         else:
             return creature
 
-    # @timeFunc
-    def breed(self, father, mother, method=None):
+    def breed(self, method, father, mother):
         """ Breed 2 creatures together and mix their dna according to the method specified.
             params:
                 father, mother: the creatures to breed together
         """
-
-        if method is None:
-            method = self.breedingMethod.get()
-
-        #* Check that the generation isn't too small
-        if len(father.dna) < self.minDnaLen.get() or len(mother.dna) < self.minDnaLen.get():
+        # Check that the dna isn't too short to effectively breed
+        if len(father.dna) < method.min_dna_len or len(mother.dna) < method.min_dna_len:
             warn('The last generation was too short, skipping breeding for this generation...')
+            return father if percent(50) else mother
 
-        child = self.creatureType(father if percent(50) else mother)
-        child.dna = []
+        dna = []
 
-        if   method == Breeding.cutoff:
-            # Get a random index in father
-            cutoff = randint(0, len(father.dna) - ~self.breedingCutoffMinLen)
-            # Randomly assign one 'half' of each to their child
-            child.dna = father.dna[:cutoff] + mother.dna[cutoff:] if percent(50) else mother.dna[:cutoff] + father.dna[cutoff:]
+        match method.method:
+            case 'Cutoff':
+                # Get a random index in father
+                cutoff = randint(0, len(father.dna) - method.min_cutoff_len)
+                # Randomly assign one 'half' of each to their child
+                dna = father.dna[:cutoff] + mother.dna[cutoff:] if percent(50) else mother.dna[:cutoff] + father.dna[cutoff:]
 
-        elif method == Breeding.multiCutoff:
-            if len(father.dna) - self.breedingCutoffMinLen.value < self.minDnaLen.value:
-                warn('The last generation was too short, skipping breeding for this generation...')
-                return father
+            case 'MultiCutoff':
+                if len(father.dna) - method.min_cutoff_len < method.min_dna_len:
+                    warn('The last generation was too short, skipping breeding for this generation...')
+                    return father if percent(50) else mother
 
-            # Get a random number of indecies between the min and max cut amounts from the length of father's dna
-            indecies = sample(range(len(father.dna) - ~self.breedingCutoffMinLen), randint(~self.breedingMultiCutsMin, ~self.breedingMultiCutsMax))
+                # Get a random number of indecies between the min and max cut amounts from the length of father's dna
+                indecies = sample(range(len(father.dna) - method.min_cutoff_len), randint(method.min_cuts, method.max_cuts))
 
-            # Just to make the loop a little easier
-            indecies.append(0)
-            indecies.append(len(father.dna))
-            indecies.sort()
+                # Just to make the loop a little easier
+                indecies.append(0)
+                indecies.append(len(father.dna))
+                indecies.sort()
 
-            chunks = []
+                chunks = []
 
-            for i in range(len(indecies)):
-                if i % 2:
-                    chunks.append(father.dna[indecies[i-1]:indecies[i]])
-                else:
-                    chunks.append(mother.dna[indecies[i-1]:indecies[i]])
+                for i in range(len(indecies)):
+                    # if i % 2:
+                    if percent(50):
+                        chunks.append(father.dna[indecies[i-1]:indecies[i]])
+                    else:
+                        chunks.append(mother.dna[indecies[i-1]:indecies[i]])
 
-            for i in chunks:
-                child.dna.extend(i)
+                for i in chunks:
+                    dna.extend(i)
 
-        elif method == Breeding.induvidual:
-            for f, m in zip(father.dna, mother.dna):
-                child.dna.append(f if percent(50) else m)
+            case 'Induvidual':
+                for f, m in zip(father.dna, mother.dna):
+                    dna.append(f if percent(method.father_bias*100) else m)
 
+            case 'Identical':
+                dna = father.dna if percent(50) else mother.dna
 
-            '''
-            # for i in range(len(father.dna)):
-            i = 0
-            while True:
-                # We only need one, because we're replacing, not filling
-                if percent(50):
-                    try:
-                        father.dna[i] = mother.dna[i]
-                    except IndexError:
-                        child.dna = father.dna
-                        return child
-                i += 1
-            '''
+        return self.creature_type(dna=dna)
 
-        else:
-            UserWarning('Generation.breedingMethod is incorrect')
+    def generate(self, gengen:GenGen, breeding:Breeding, mutation:Mutation, selection:Selection):
+        match gengen.method:
+            case "FamilyLine":
+            #     father, mother = self.select(selection, self.creatures)
+            #     gen_size = len(self.creatures) - (2 if gengen.include_parents else 0)
+            #     # TODO: parellelize this with process pool
+            #     creatures = [self.breed(breeding, father, mother) for _ in range(gen_size)]
 
-        return child
+            #     #* Include Parents
+            #     if gengen.include_parents:
+            #         creatures += [father, mother]
 
-    @timeFunc
-    def generate(self, prevGen, method=None):
-        if method is None:
-            method = self.genGenMethod.get()
+            # case 'MultiFamilyLine':
+                couples = []
 
-        print(f'Generating Generation {self.num}')
+                for _ in range(gengen.families):
+                    couples.append(self.select(selection, self.creatures))
 
-        #* Get the best creature
-        if getChampiant.get() and prevGen is not None and method in (GenGen.familyLine, GenGen.induvidual):
-            if not len(prevGen.creatures):
-                raise UserWarning('The last generation doesn\'t have any creatures in it for some reason')
+                gen_size = len(self.creatures) - ((len(couples) * 2) if gengen.include_parents else 0)
 
-            print(f'The champiant of generation {prevGen.num} is: {max(prevGen.creatures)}')
+                # TODO parrellelize this
+                creatures = [
+                    self.breed(breeding, father, mother)
+                    for father, mother in
+                    couples * ceil(gen_size / len(couples))
+                ]
 
+                # Remove random creatures until we have the right amount
+                while len(creatures) > gen_size:
+                    creatures.pop(randint(0, len(creatures)-1))
 
-        if   method == GenGen.familyLine:
-            father, mother = self.selectCreatures(prevGen.creatures)
+                #* Include Parents
+                if gengen.include_parents:
+                    for i in couples:
+                        creatures += i
 
-            # for _ in range(self.genSize.get()):
-            #     self.creatures.append(self.breed(father, mother))
-            with getTime('breeding'):
-                with Pool(1) as process:
-                    self.creatures = process.starmap_async(self.breed, ((father, mother),) * self.genSize.get()).get()
+            case 'MutationOnly':
+                creatures = self.creatures
 
-            #* Include Parents
-            if self.genGenIncludeParents.get():
-                self.creatures += [self.creatureType(mother, parent=True), self.creatureType(father, parent=True)]
+            case 'Random':
+                creatures = [self.creature_type() for _ in range(self.size)]
 
+        # We don't need to mutate if they're all random anyway
+        if gengen.method != 'Random':
+            # TODO: Parellelize this
+            creatures = [self.mutate(mutation, i) for i in creatures]
 
-        elif method == GenGen.induvidual:
-            couples = []
-            selectedCouple = 0
+        if self.verbose:
+            print(f'Generated {len(creatures)} new ants')
 
-            for _ in range(~self.genGenInduvidualNumCouples):
-                couples.append(self.selectCreatures(prevGen.creatures))
+        return Generation(creatures)
 
-            with Pool(1) as process:
-                self.creatures = process.starmap_async(self.breed, couples * ceil(self.genSize.get() / len(couples)),
-                                                       self.genSize.get() / 2).get()
+    def reward(self):
+        points = 0
+        # If we do this, because ants are incentivised to gather food, as well as return it, it
+        # incentivizes larger generations to hover around food instead of learning to bring it back
+        # Sum the rewards of the best ants
+        for i in sorted(self.creatures, reverse=True)[:self.score_by_top_n]:
+            points += i.reward()
+        # Incentivize shorter rounds
+        # this won't change anything if the rounds are all the same length.
+        # but if the rounds are dynamic, this will incentivize shorter rounds, which is good
+        points -= self._steps * 2500
+        return points
 
-            # while len(self.creatures) < self.genSize.get():
-            #     father, mother = couples[selectedCouple % len(couples)]
-            #     self.creatures.append(self.breed(father, mother))
-            #     selectedCouple += 1
-
-            #* Include Parents
-            if self.genGenIncludeParents.get():
-                for i in couples:
-                    self.creatures += [self.creatureType(i[0], parent=True), self.creatureType(i[1], parent=True)]
-
-
-        elif method == GenGen.none:
-            for _ in range(~self.genSize):
-                self.creatures.append(self.creatureType())
-
-        elif method == GenGen.mutationOnly:
-            self.creatures = prevGen.creatures
-
-        else:
-            UserWarning('Generation.genGenMethod is incorrect')
-
-        if method != GenGen.none:
-            # Standard:             0.30496
-            # Pool():               0.27703
-            # Pool(64):             0.93315
-            # Pool(16):             0.30685
-            # Pool(2):              0.14833
-            # Pool(1):              0.10099
-            # Pool(1, tasks=None):  0.10288
-            # Pool(1, tasks=2):     -------
-            # Pool(16, tasks=20):   0.34784
-            # Pool(16, tasks=None): 0.3588
-            # ThreadPoolExecuter:   0.47117
-            # ProcessPoolExecuter:  0.62925
-            # Pool(4, tasks=400):   0.13842
-
-
-            # for i in range(len(self.creatures)):
-            #     self.creatures[i] = self.mutate(self.creatures[i])
-
-            # with concurrent.futures.ProcessPoolExecutor() as executor:
-            #     for i, mutated in zip(range(len(self.creatures)), executor.map(self.mutate, self.creatures)):
-            #         self.creatures[i] = mutated
-
-            with getTime('mutating'):
-                with Pool(1) as process:
-                    self.creatures = process.map_async(self.mutate, self.creatures).get()
-
-            # with concurrent.futures.ProcessPoolExecutor() as executor:
-                # self.creatures = list(executor.map(self.mutate, self.creatures))
-                # future = executor.submit(self.mutate, )
-                # return_value = future.result()
-                # print(return_value)
-
-            # processes = set()
-            # for i in range(len(self.creatures)):
-            #     p = Process(target = self.mutate, args=(self.creatures[i],))
-            #     p.start()
-            #     processes.add(p)
-            # self.creatures = []
-            # for i in processes:
-            #     self.creatures.append(i.join())
-
-            # print(self.creatures)
-
-            # with concurrent.futures.ProcessPoolExecutor() as executor:
-            #     for i, mutated in zip(range(len(self.creatures)), executor.map(self.mutate, self.creatures)):
-            #         self.creatures[i] = mutated
-
-        print(f'{len(self.creatures)} new creatues generated in this generation.')
-
-        # return self.creatures
-
-
-    def getScore(self):
-        total = 0
-        for i in sorted(self.creatures)[:self.genScoreBy.get()]:
-            total += i.getScore()
-        return round(total)
-
+    def step(self):
+        self._steps += 1
+        [creature.wander() for creature in self.creatures]
 
     def __lt__(self, gen):
         assert(type(gen) == Generation)
-        if not len(self.creatures) or not len(gen.creatures):
-            return True
 
         #* *Don't* go by the best creature in each generation.
         # return max(self.creatures) < max(gen.creatures)
-        #* Go by the collective score if it's contained creatures
-        return self.getScore() < gen.getScore()
+        #* Go by the collective score of it's contained creatures
+        return self.reward() < gen.reward()
 
     def __gt__(self, gen):
         assert(type(gen) == Generation)
-        if not len(self.creatures) or not len(gen.creatures):
-            return True
 
         # return max(self.creatures) > max(gen.creatures)
-        return self.getScore() > gen.getScore()
+        return self.reward() > gen.reward()
 
-    def __str__(self):
-        return f'Gen[num={self.num}, score={self.getScore()}, len(creatures)={len(self.creatures)}]'
+    def __repr__(self):
+        return f'Gen[score={self.reward()}, len(creatures)={len(self.creatures)}]'
