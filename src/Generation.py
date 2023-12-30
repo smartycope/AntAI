@@ -8,6 +8,7 @@ from Nucleotide import Nucleotide
 from Options import *
 # This isn't actually necissary
 from Ant import Ant
+from typing import List
 
 
 def percent(percentage):
@@ -19,6 +20,7 @@ def percent(percentage):
 
 
 class Generation:
+    # TODO: parrelelize breeding and mutation generations
     processes = 4
     creature_type = Creature
     nucleotide_type = Nucleotide
@@ -33,7 +35,8 @@ class Generation:
         self._steps = 0
         self.creatures = [self.creature_type(dna=dna) for _ in range(self.size)] if creatures is None else creatures
 
-    def select(self, method, creatures) -> tuple:
+    @classmethod
+    def select(cls, method:Selection, creatures:List[Creature]) -> tuple:
         """ Select a couple for breeding out of self.creatures
             returns: tuple of 2 creatures
         """
@@ -60,26 +63,28 @@ class Generation:
                 assert(isPowerOf2(method.num_couples))
 
                 couples = sorted(creatures)[-method.num_couples-1: -1] \
-                        if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
+                        if not isPowerOf2(len(creatures)) \
                         else creatures
+                        # if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
 
-                children = [self.breed(method.breeding_method, couples[i], couples[i+1])
+                children = [cls.breed(method.breeding_method, couples[i], couples[i+1])
                             for i in range(0, len(couples), 2)]
 
-                rtn = children if len(children) == 2 else self.select(Selection.RoyalLine, children)
+                rtn = children if len(children) == 2 else cls.select(Selection.RoyalLine, children)
 
             case 'Inbred':
                 assert(isPowerOf2(method.num_couples))
 
                 couples = sample(creatures, method.num_couples) \
-                        if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
+                        if not isPowerOf2(len(creatures)) \
                         else creatures
+                        # if len(creatures) >= len(self.creatures) or not isPowerOf2(len(creatures)) \
 
-                children = [self.breed(couples[i], couples[i+1]) for i in range(0, len(couples), 2)]
+                children = [cls.breed(couples[i], couples[i+1]) for i in range(0, len(couples), 2)]
 
-                rtn = children if len(children) == 2 else self.select(Selection.Inbred, children)
+                rtn = children if len(children) == 2 else cls.select(Selection.Inbred, children)
 
-        if self.verbose:
+        if cls.verbose:
             print('Selecting ants:', f'Mother: {repr(rtn[0])}', f'Father: {repr(rtn[1])}', sep='\n')
 
         if Ant.limit_after_collected:
@@ -87,12 +92,13 @@ class Generation:
             rtn[1].limit()
         return rtn
 
-    def mutate(self, method, creature):
+    @classmethod
+    def mutate(cls, method:Mutation, creature:Creature) -> Creature:
         if percent(method.total_mutation_chance*100):
             # If it wasn't specified (it was supposed to be), then try to imply it
-            if self.nucleotide_type is None:
-                self.nucleotide_type = type(self.creatures[0].dna[0]) if len(self.creatures) and len(self.creatures[0].dna) else type(creature.dna[0])
-            mutated = self.creature_type(creature.dna.copy())
+            if cls.nucleotide_type is Nucleotide and len(creature.dna):
+                cls.nucleotide_type = type(creature.dna[0])
+            mutated = cls.creature_type(creature.dna.copy())
             match method.method:
                 case 'Cutoff':
                     cutoff = randint(0, len(creature.dna) - 1)
@@ -100,12 +106,12 @@ class Generation:
 
                 case 'Chunk':
                     start, end = sorted(sample(range(len(creature.dna)), 2))
-                    mutated.dna = creature.dna[:start] + [self.nucleotide_type() for _ in range(end-start)] + creature.dna[end:]
+                    mutated.dna = creature.dna[:start] + [cls.nucleotide_type() for _ in range(end-start)] + creature.dna[end:]
 
                 case 'Induvidual':
                     for cnt in range(len(mutated.dna)):
                         if percent(method.mutation_chance*100):
-                            mutated.dna[cnt] = self.nucleotide_type()
+                            mutated.dna[cnt] = cls.nucleotide_type()
 
                 case 'Invert':
                     start, end = sorted(sample(range(len(creature.dna)), 2))
@@ -123,13 +129,14 @@ class Generation:
 
                     for i in range(len(indecies)):
                         if i % 2:
-                            mutated.dna[indecies[i-1]:indecies[i]] = [self.nucleotide_type() for _ in range(indecies[i]-indecies[i-1])]
+                            mutated.dna[indecies[i-1]:indecies[i]] = [cls.nucleotide_type() for _ in range(indecies[i]-indecies[i-1])]
 
             return mutated
         else:
             return creature
 
-    def breed(self, method, father, mother):
+    @classmethod
+    def breed(cls, method:Breeding, father, mother) -> Creature:
         """ Breed 2 creatures together and mix their dna according to the method specified.
             params:
                 father, mother: the creatures to breed together
@@ -180,9 +187,12 @@ class Generation:
             case 'Identical':
                 dna = father.dna if percent(50) else mother.dna
 
-        return self.creature_type(dna=dna)
+            case 'Reverse':
+                dna = list(reversed(father.dna if percent(50) else mother.dna))
 
-    def generate(self, gengen:GenGen, breeding:Breeding, mutation:Mutation, selection:Selection):
+        return cls.creature_type(dna=dna)
+
+    def generate(self, gengen:GenGen, breeding:Breeding, mutation:Mutation, selection:Selection) -> 'Generation':
         match gengen.method:
             case "FamilyLine":
             #     father, mother = self.select(selection, self.creatures)
@@ -234,7 +244,7 @@ class Generation:
 
         return Generation(creatures)
 
-    def reward(self):
+    def reward(self) -> int:
         points = 0
         # If we do this, because ants are incentivised to gather food, as well as return it, it
         # incentivizes larger generations to hover around food instead of learning to bring it back

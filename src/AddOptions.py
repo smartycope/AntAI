@@ -37,3 +37,7 @@ class AddOptions(type):
         #         print(inspect.getcomments(getattr(globals()[clsname], attr)))
 
         return super().__new__(cls, clsname, bases, updated_attrs)
+
+
+if __name__ == '__main__':
+    pass

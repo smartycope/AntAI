@@ -12,7 +12,7 @@ class SimpleGym(gym.Env, ABC):
     """ A simplified Gymnasium enviorment that uses pygame and handles some stuff for you, like rendering
         keeping track of steps, returning the right things from the right functions, event handling,
         including some default keyboard shortcuts, and some debugging features. Includes a .print()
-        function that prints directly to the screen.
+        and .step_print() functions that print directly to the screen.
         By default:
             q closes the window
             p toggles pause
@@ -201,6 +201,15 @@ class SimpleGym(gym.Env, ABC):
 
         self.userSurf.blit(self.font.render(str(string), True, self.print_color), (5 + ((self.userSurfOffset // 40) * 100), 5 + (self.userSurfOffset % 40)))
         self.userSurfOffset += 10
+
+    def step_print(self, string):
+        """ Prints `string` directly to the screen. Must be called once per render. """
+        self._init_pygame()
+
+        text_surf = self.font.render(str(string), True, self.print_color)
+        text_rect = text_surf.get_rect()
+        pygame.draw.rect(self.userSurf, self.background_color, Rect(5 + ((self.userSurfOffset // 40) * 100), 5 + (self.userSurfOffset % 40), text_rect.width, text_rect.height))
+        self.userSurf.blit(text_surf, (5 + ((self.userSurfOffset // 40) * 100), 5 + (self.userSurfOffset % 40)))
 
     def close(self):
         if self.screen is not None:
