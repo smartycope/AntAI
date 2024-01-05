@@ -3,10 +3,8 @@ from Movement import Movement
 from random import randint
 import pygame.gfxdraw
 import pygame
-# from TkOptions import Option
-# from Cope import reprise, debug, closeEnough
 from Creature import Creature
-from scipy.spatial.distance import cdist
+# from scipy.spatial.distance import cdist
 from copy import copy, deepcopy
 import numpy as np
 import math
