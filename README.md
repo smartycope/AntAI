@@ -7,7 +7,7 @@ This is my Christmas break hobby project. Thus far, I've worked on it almost exc
 ```bash
 git clone https://github.com/smartycope/AntAI.git
 cd AntAI
-pip install requirements.txt
+pip install -r requirements.txt
 python3 src
 ```
 
