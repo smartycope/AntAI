@@ -9,48 +9,21 @@ from rich.table import Table
 from rich import print as rprint
 from random import randint
 
-def summarize(generations):
-    sorted_gen = sorted(generations, reverse=True)
-
-    table = Table(title='Generations')
-    table.add_column('#')
-    table.add_column('Rank')
-    table.add_column('Steps')
-    table.add_column('Ants')
-    table.add_column('Reward')
-    table.add_column('Food Collected')
-    table.add_column('Food Gathered')
-    table.add_column('ChampiAnt')
-    # table.add_column('Worst Ant')
-
-    for cnt, gen in enumerate(generations):
-        sorted_ants = sorted(gen.creatures)
-        table.add_row(
-            str(cnt + 1),
-            str(sorted_gen.index(gen) + 1),
-            str(gen._steps),
-            str(gen.size),
-            str(round(gen.reward())),
-            str(sum(map(lambda a: a.food_collected, gen.creatures))),
-            str(sum(map(lambda a: a.food_gathered, gen.creatures))),
-            repr(sorted_ants[-1]),
-            # repr(sorted_ants[0]),
-        )
-
-    rprint(table)
-    print(f'Best Generation: #{generations.index(sorted_gen[0])+1}: {sorted_gen[0]}')
-    # Save the best ant's DNA
-    with open('bestDNA.txt', 'w') as f:
-        f.writelines(', '.join(map(str, sorted(sorted_gen[0].creatures)[-1].dna)))
 
 if __name__ == '__main__':
-    rounds = False
+    # "rounds" mode vs "real time simulation" mode.
+    # Do we want to kill the generation of ants every so often, select new ants to breed & mutate,
+    # then make a new generation
+    # Or do we want to have ants wander around and survival pressures (like age or a max number of
+    # ants on the table) optimize them?
+    rounds = True
 
     # Config
-    screen_size = 300
+    screen_size = 500
     # If not dynamically resetting, how long each generation lasts
     steps = 500
-    # Reset after this many foods have been brought back to home. Or None, to reset after a certain number of steps
+    # Reset after this many foods have been brought back to home. Or None, to reset after a certain
+    # number of steps
     dynamic_reset = 3
     # Sort the Generations and create a new Generation from the best one, instead of just the last one
     # If this is a number, it gets the best generation of the last n generations, and goes off of that
@@ -64,10 +37,14 @@ if __name__ == '__main__':
     TabletopEnv.verbose = False
     Generation.verbose = False
     Ant.verbose = False
-    Ant.rounds = TabletopEnv.rounds = rounds
+
     # How much each ant can move in any direction
     Movement.max_movement = 2
+    # Do we color ants by their reward (the more red the better), or based on their state (do they have
+    # food, have they brought food back, etc.)
     TabletopEnv.color_by_reward = True
+    # Clip, in real-time simulation mode can cause some interesting problems.
+    # It's not really a problem in rounds mode
     TabletopEnv.bound_method = 'loop'
     # Range of how many foods to put on the table
     TabletopEnv.min_foods = 40
@@ -82,7 +59,8 @@ if __name__ == '__main__':
     TabletopEnv.home_size = 10
     # Max number of ants allowed (only relevant in real-time simulation mode)
     TabletopEnv.max_ants = 300
-    # Ants have to be alive for this many steps before they can breed
+    # Ants have to be alive for this many steps before they can breed. Also only relevant in real-time
+    # simulation mode
     TabletopEnv.age_of_maturity = 50
     # How many ants are in each generation
     Generation.size = 100
@@ -90,8 +68,6 @@ if __name__ == '__main__':
     # Setting this to dynamic_reset alleviates the problem of the ants just hanging around food
     # and not bringing it back, because they're incentivised to gather food as well.
     Generation.score_by_top_n = dynamic_reset if dynamic_reset is not None else 10
-    Generation.creature_type = Ant
-    Generation.nucleotide_type = Movement
     # Delete any DNA after we gathered and returned a food
     Ant.limit_after_collected = True
     # Where the ants bring food back to
@@ -115,9 +91,52 @@ if __name__ == '__main__':
     breeding_method = Breeding.Identical
     # How we select ants to be bred from the previous generation
     selection_method = Selection.WinnerSecond
-    # How we mutate the ants
-    mutation_method = Mutation.Induvidual(total_mutation_chance=0.8, mutation_chance=.3)
+    # How we mutate the ants' DNA
+    mutation_method = Mutation.Induvidual(total_mutation_chance=0.9, mutation_chance=.05 if rounds else .3)
 
+    # Don't touch these
+    Ant.rounds = TabletopEnv.rounds = rounds
+    Generation.creature_type = Ant
+    Generation.nucleotide_type = Movement
+
+
+    # I'm putting this here, just so all the config options come first
+    def summarize(generations):
+        sorted_gen = sorted(generations, reverse=True)
+
+        table = Table(title='Generations')
+        table.add_column('#')
+        table.add_column('Rank')
+        table.add_column('Steps')
+        table.add_column('Ants')
+        table.add_column('Reward')
+        table.add_column('Food Collected')
+        table.add_column('Food Gathered')
+        table.add_column('ChampiAnt')
+        # table.add_column('Worst Ant')
+
+        for cnt, gen in enumerate(generations):
+            sorted_ants = sorted(gen.creatures)
+            table.add_row(
+                str(cnt + 1),
+                str(sorted_gen.index(gen) + 1),
+                str(gen._steps),
+                str(gen.size),
+                str(round(gen.reward())),
+                str(sum(map(lambda a: a.food_collected, gen.creatures))),
+                str(sum(map(lambda a: a.food_gathered, gen.creatures))),
+                repr(sorted_ants[-1]),
+                # repr(sorted_ants[0]),
+            )
+
+        rprint(table)
+        print(f'Best Generation: #{generations.index(sorted_gen[0])+1}: {sorted_gen[0]}')
+        # Save the best ant's DNA
+        with open('bestDNA.txt', 'w') as f:
+            f.writelines(', '.join(map(str, sorted(sorted_gen[0].creatures)[-1].dna)))
+
+
+    # The actual driver code.
     if rounds:
         # Setup
         generations = [Generation()]
