@@ -42,16 +42,16 @@ if __name__ == '__main__':
     Movement.max_movement = 2
     # Do we color ants by their reward (the more red the better), or based on their state (do they have
     # food, have they brought food back, etc.)
-    TabletopEnv.color_by_reward = True
+    TabletopEnv.color_by_reward = False
     # Clip, in real-time simulation mode can cause some interesting problems.
     # It's not really a problem in rounds mode
     TabletopEnv.bound_method = 'loop'
     # Range of how many foods to put on the table
-    TabletopEnv.min_foods = 40
-    TabletopEnv.max_foods = 100
+    TabletopEnv.min_foods = 100
+    TabletopEnv.max_foods = 150
     # Range of how much food each food area has in it
-    TabletopEnv.min_food_amt = 220
-    TabletopEnv.max_food_amt = 400
+    TabletopEnv.min_food_amt = 320
+    TabletopEnv.max_food_amt = 500
     TabletopEnv.fps = 30
     # How big the food, ants, and home are, in pixels
     TabletopEnv.food_size = 5
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # How long the ants can survive without food
     Ant.stomach = 50
     # How much food an ant can hold
-    Ant.food_capacity = 2
+    Ant.food_capacity = 1 if rounds else 2
     # How old the ants can get. Set to None to not limit it
     Ant.max_age = 150
     # Max length of the DNA allowed
@@ -90,9 +90,9 @@ if __name__ == '__main__':
     # How we breed ants together
     breeding_method = Breeding.Identical
     # How we select ants to be bred from the previous generation
-    selection_method = Selection.WinnerSecond
+    selection_method = Selection.GroupWinnerSecond
     # How we mutate the ants' DNA
-    mutation_method = Mutation.Induvidual(total_mutation_chance=0.9, mutation_chance=.05 if rounds else .3)
+    mutation_method = Mutation.Induvidual(total_mutation_chance=0.9, mutation_chance=.1 if rounds else .3)
 
     # Don't touch these
     Ant.rounds = TabletopEnv.rounds = rounds

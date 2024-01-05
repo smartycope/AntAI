@@ -11,13 +11,18 @@ cd AntAI
 pip install -r requirements.txt
 python src
 ```
+- There are 2 modes, *rounds* mode *real time simulation* mode:
+    - *rounds* mode is where we kill the generation of ants every so often, select new to breed & mutate, then make a new generation from a previous generation
+    - *real time simulation* mode is where we have ants wander around and survival pressures (like age or a max number of ants allowed on the table) optimize them
+- You can click anywhere to add food, and right click in real time simulation mode, it will add an ant there
+- 'q' quits, up and down speed up and slow down the simulation, 'p' pauses, and 's' steps by frame
+- Code Locations:
+    - All the driver code is in [__main\__.py](src/__main__.py).
+    - All the rendering and environment code is in [TabletopEnv.py](src/TabletopEnv.py) and [SimpleGym.py](src/SimpleGym.py).
+    - All the interesting code is in [Generation.py](src/Generation.py).
+    - All the explanations for the Options relating to Breeding, Mutating, Selecting, and Generating are in [Options.py](src/Options.py)
 
-- All the driver code is in __main__.py.
-- All the rendering and environment code is in TabletopEnv.py and SimpleGym.py.
-- All the interesting code is in Generation.py.
-- All the explanations for the Options relating to Breeding, Mutating, Selecting, and Generating are in [Options.py](src/Options.py)
-
-## Explanation of my Custom Enviorment
+## Explanation of my Custom Environment
 The goal is for the ants (the little white dots) to wander around the screen until they find food (the little blue dots), then bring the food back to their home (the pink dot in the center).
 
 The Ant's value function is specified by the Ant.reward() function, which goes something like this:
