@@ -39,5 +39,35 @@ class AddOptions(type):
         return super().__new__(cls, clsname, bases, updated_attrs)
 
 
+class Option:
+    def __init__(self, default, name, desc=''):
+        self.default = default
+        self.name = name
+        self.desc = desc
+
+class OptionsMaker(type):
+    """ A metaclass that takes the dict, and makes it into an option, along with it's name and type """
+    def __new__(cls, clsname, bases, attrs, **kwargs):
+        # updated_attrs = {
+        #     attr: v if attr.startswith("__") else Options(clsname, attr, **v, **kwargs)
+        #     for attr, v in attrs.items()
+        # }
+        # Go through all the static members and make options out of them
+        # updated_attrs = {}
+        options = []
+        for attr, v in attrs.items():
+            if not attr.startswith("__"):
+                Option(v, )
+                # Options(clsname, attr, **v, **kwargs)
+
+        setattr(cls, attr, options)
+            # updated_attrs[attr] = v
+            # if not attr.startswith("__"):
+            #     print('-'*50)
+            #     print(attr)
+            #     print(inspect.getcomments(getattr(globals()[clsname], attr)))
+
+        return super().__new__(cls, clsname, bases, updated_attrs)
+
 if __name__ == '__main__':
     pass

@@ -71,8 +71,10 @@ class Mutation(metaclass=AddOptions, total_mutation_chance=1):
 
 # Some small testing
 if __name__ == '__main__':
-    print(GenGen.FamilyLine.type)
-    print(GenGen.FamilyLine.method)
+    # print(GenGen.FamilyLine.type)
+    # print(GenGen.FamilyLine.method)
     f = GenGen.FamilyLine()
     print(f.include_parents)
-    print(f.test)
+    print(OptionsMaker.FamilyLine)
+
+    # print(f.test)

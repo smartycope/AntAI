@@ -66,7 +66,7 @@ if __name__ == '__main__':
     Ant.verbose = False
     Ant.rounds = TabletopEnv.rounds = rounds
     # How much each ant can move in any direction
-    Movement.max_movement = 5
+    Movement.max_movement = 2
     TabletopEnv.color_by_reward = True
     TabletopEnv.bound_method = 'loop'
     # Range of how many foods to put on the table
@@ -99,14 +99,14 @@ if __name__ == '__main__':
     # Where the ants start (they don't have to start at home)
     Ant.start = Ant.home
     # Real-time simulation Options
-    # Max length of the DNA allowed
-    Ant.memory = 200
     # How long the ants can survive without food
     Ant.stomach = 50
     # How much food an ant can hold
     Ant.food_capacity = 2
     # How old the ants can get. Set to None to not limit it
-    Ant.max_age = 200
+    Ant.max_age = 150
+    # Max length of the DNA allowed
+    Ant.memory = Ant.max_age
 
     # Options: see Options.py for details
     # "Generation generation": How we generate the next generation
@@ -114,9 +114,9 @@ if __name__ == '__main__':
     # How we breed ants together
     breeding_method = Breeding.Identical
     # How we select ants to be bred from the previous generation
-    selection_method = Selection.GroupWinnerSecond(group_size=10)
+    selection_method = Selection.WinnerSecond
     # How we mutate the ants
-    mutation_method = Mutation.Induvidual(total_mutation_chance=0.8, mutation_chance=.2)
+    mutation_method = Mutation.Induvidual(total_mutation_chance=0.8, mutation_chance=.3)
 
     if rounds:
         # Setup

@@ -105,7 +105,7 @@ class Ant(Creature):
         # If we have food, how bad is it we're away from home per pixel
         'distance to home penalty': 10,
         # If we don't have food, how good is it we're away from home pixel
-        'distance from home bonus': 10,
+        'distance from home bonus': 1000,
         'age bonus': 5,
         'hunger penalty': 100,
         # If it's taken you 500 steps since you last got food, you may not be going anywhere
@@ -150,7 +150,7 @@ class Ant(Creature):
             score -= self.hunger * self._rewards['hunger penalty']
             score -= self.steps_since_collected_food * self._rewards['steps since food penalty']
 
-        if self.dead:
+        if self.dead and not self.rounds:
             score = self._rewards['dead score']
 
         return score
